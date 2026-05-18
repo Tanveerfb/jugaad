@@ -1,45 +1,29 @@
 import { useFsStore } from "@/stores/fsStore";
-import { openBaseFolder, createProjectFolder } from "@/lib/fs/handle";
-import { readFile, writeFile, deleteFile } from "@/lib/fs/writer";
+import { readFile, writeFile } from "@/lib/fs/writer";
+import { rebuildFileTree } from "@/lib/fs/tree";
 
 export function useFileSystem() {
-  const baseFolderHandle = useFsStore((s) => s.baseFolderHandle);
-  const projectHandle = useFsStore((s) => s.projectHandle);
-  const setProjectHandle = useFsStore((s) => s.setProjectHandle);
+  const projectPath = useFsStore((s) => s.projectPath);
 
-  async function pickBaseFolder() {
-    return openBaseFolder();
-  }
-
-  async function createProject(name: string) {
-    if (!baseFolderHandle) throw new Error("No base folder selected.");
-    const handle = await createProjectFolder(baseFolderHandle, name);
-    setProjectHandle(handle);
-    return handle;
+  async function refreshTree() {
+    if (!projectPath) throw new Error("No project folder selected.");
+    return rebuildFileTree(projectPath);
   }
 
   async function read(filePath: string) {
-    if (!projectHandle) throw new Error("No project folder selected.");
-    return readFile(projectHandle, filePath);
+    if (!projectPath) throw new Error("No project folder selected.");
+    return readFile(projectPath, filePath);
   }
 
   async function write(filePath: string, content: string) {
-    if (!projectHandle) throw new Error("No project folder selected.");
-    return writeFile(projectHandle, filePath, content);
-  }
-
-  async function remove(filePath: string) {
-    if (!projectHandle) throw new Error("No project folder selected.");
-    return deleteFile(projectHandle, filePath);
+    if (!projectPath) throw new Error("No project folder selected.");
+    return writeFile(projectPath, filePath, content);
   }
 
   return {
-    baseFolderHandle,
-    projectHandle,
-    pickBaseFolder,
-    createProject,
+    projectPath,
+    refreshTree,
     read,
     write,
-    remove,
   };
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { Task, TaskStatus } from "@/types";
 
 type TaskStore = {
@@ -18,40 +19,55 @@ type TaskStore = {
   incrementRetry: (id: string) => void;
 };
 
-export const useTaskStore = create<TaskStore>((set) => ({
-  tasks: [],
-  activeTaskId: null,
-  isExecuting: false,
-  streamBuffer: "",
-  setTasks: (tasks) => set({ tasks }),
-  updateTaskStatus: (id, status) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
-    })),
-  setTaskOutput: (id, output) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, output } : t)),
-    })),
-  setTaskError: (id, error) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, error } : t)),
-    })),
-  setActiveTask: (id) => set({ activeTaskId: id }),
-  appendToStream: (chunk) =>
-    set((state) => ({ streamBuffer: state.streamBuffer + chunk })),
-  clearStream: () => set({ streamBuffer: "" }),
-  resetTasks: () =>
-    set({
+export const useTaskStore = create<TaskStore>()(
+  persist(
+    (set) => ({
       tasks: [],
       activeTaskId: null,
       isExecuting: false,
       streamBuffer: "",
+      setTasks: (tasks) => set({ tasks }),
+      updateTaskStatus: (id, status) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, status } : t)),
+        })),
+      setTaskOutput: (id, output) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, output } : t)),
+        })),
+      setTaskError: (id, error) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, error } : t)),
+        })),
+      setActiveTask: (id) => set({ activeTaskId: id }),
+      appendToStream: (chunk) =>
+        set((state) => ({ streamBuffer: state.streamBuffer + chunk })),
+      clearStream: () => set({ streamBuffer: "" }),
+      resetTasks: () =>
+        set({
+          tasks: [],
+          activeTaskId: null,
+          isExecuting: false,
+          streamBuffer: "",
+        }),
+      setIsExecuting: (v) => set({ isExecuting: v }),
+      incrementRetry: (id) =>
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id ? { ...t, retryCount: t.retryCount + 1 } : t,
+          ),
+        })),
     }),
-  setIsExecuting: (v) => set({ isExecuting: v }),
-  incrementRetry: (id) =>
-    set((state) => ({
-      tasks: state.tasks.map((t) =>
-        t.id === id ? { ...t, retryCount: t.retryCount + 1 } : t,
-      ),
-    })),
-}));
+    {
+      name: "jugaad-tasks",
+      partialize: (s) => ({ tasks: s.tasks }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isExecuting = false;
+          state.activeTaskId = null;
+          state.streamBuffer = "";
+        }
+      },
+    },
+  ),
+);

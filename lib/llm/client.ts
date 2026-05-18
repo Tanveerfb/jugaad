@@ -7,18 +7,43 @@ export class LLMConnectionError extends Error {
   }
 }
 
+/**
+ * When called from the browser, any request to a different origin (e.g.
+ * LM Studio on :1234 from the app on :9999) is blocked by CORS.
+ * Route those through the Next.js server-side proxy instead.
+ * Server-side calls (e.g. task generator) hit the target directly.
+ */
+function resolveRequest(
+  target: string,
+  baseHeaders: Record<string, string>,
+): { url: string; headers: Record<string, string> } {
+  if (
+    typeof window !== "undefined" &&
+    new URL(target).origin !== window.location.origin
+  ) {
+    return {
+      url: "/api/lm-proxy",
+      headers: { ...baseHeaders, "x-proxy-target": target },
+    };
+  }
+  return { url: target, headers: baseHeaders };
+}
+
 export async function streamChat(
   messages: ConversationMessage[],
   config: LLMConfig,
   onChunk: (chunk: string) => void,
 ): Promise<string> {
-  const url = `${config.baseUrl}/v1/chat/completions`;
+  const target = `${config.baseUrl}/v1/chat/completions`;
+  const { url, headers } = resolveRequest(target, {
+    "Content-Type": "application/json",
+  });
 
   let response: Response;
   try {
     response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         model: config.model,
         messages: messages.map(({ role, content }) => ({ role, content })),
@@ -29,7 +54,7 @@ export async function streamChat(
     });
   } catch {
     throw new LLMConnectionError(
-      `Unable to reach LLM at ${url}. Is your LLM server running?`,
+      `Unable to reach LLM at ${target}. Is your LLM server running?`,
     );
   }
 
@@ -84,13 +109,14 @@ export async function streamChat(
 export async function fetchModels(
   config: Pick<LLMConfig, "baseUrl">,
 ): Promise<string[]> {
-  const url = `${config.baseUrl}/v1/models`;
+  const target = `${config.baseUrl}/v1/models`;
+  const { url, headers } = resolveRequest(target, {});
   let response: Response;
   try {
-    response = await fetch(url, { method: "GET" });
+    response = await fetch(url, { method: "GET", headers });
   } catch {
     throw new LLMConnectionError(
-      `Unable to reach LLM at ${url}. Is your LLM server running?`,
+      `Unable to reach LLM at ${target}. Is your LLM server running?`,
     );
   }
 

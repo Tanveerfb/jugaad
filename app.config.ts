@@ -13,7 +13,7 @@ const appConfig = {
       provider: "ollama" as "ollama" | "lmstudio",
       ollamaBaseUrl: "http://localhost:11434",
       lmstudioBaseUrl: "http://localhost:1234",
-      model: "llama3",
+      model: "qwen3.5:latest",
       temperature: 0.3,
       maxTokens: 4096,
     },

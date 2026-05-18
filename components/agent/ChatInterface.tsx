@@ -20,6 +20,7 @@ export default function ChatInterface() {
   const isPlanning = useProjectPlanStore((s) => s.isPlanning);
   const setIsPlanning = useProjectPlanStore((s) => s.setIsPlanning);
   const plan = useProjectPlanStore((s) => s.plan);
+  const pendingStack = useProjectPlanStore((s) => s.pendingStack);
   const llmConfig = useLLMConfigStore();
 
   useEffect(() => {
@@ -45,16 +46,7 @@ export default function ChatInterface() {
       const { response, extractedPlan } = await sendMessage(
         text,
         conversation,
-        plan?.stack ?? {
-          selected: [
-            "nextjs",
-            "typescript",
-            "tailwind",
-            "shadcn",
-            "zod",
-            "rhf",
-          ],
-        },
+        plan?.stack ?? pendingStack,
         llmConfig,
         (chunk) => setStreamingContent((prev) => prev + chunk),
       );

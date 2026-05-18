@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { auth } from "@/lib/firebase/config";
 import type { User } from "firebase/auth";
 
 type AuthStore = {
@@ -15,12 +16,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
 }));
 
-// Sync Firebase auth state to store — client-side only
-if (typeof window !== "undefined") {
-  import("@/lib/firebase/config").then(({ auth }) => {
-    auth.onAuthStateChanged((user: User | null) => {
-      useAuthStore.getState().setUser(user);
-      useAuthStore.getState().setIsLoading(false);
-    });
-  });
-}
+// Sync Firebase auth state to store — runs once on module load (client-side only
+// because studio/settings pages use force-dynamic which skips SSR)
+auth.onAuthStateChanged((user) => {
+  useAuthStore.getState().setUser(user);
+  useAuthStore.getState().setIsLoading(false);
+});

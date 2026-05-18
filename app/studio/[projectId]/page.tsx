@@ -12,22 +12,22 @@ import FolderPicker from "@/components/filesystem/FolderPicker";
 
 export default function ProjectPage() {
   const tasks = useTaskStore();
-  const projectHandle = useFsStore((s) => s.projectHandle);
+  const projectPath = useFsStore((s) => s.projectPath);
   const llmConfig = useLLMConfigStore();
 
   async function handleStart() {
-    if (!projectHandle) {
+    if (!projectPath) {
       toast.error("Select an output folder first.");
       return;
     }
     try {
-      await executeAll(tasks.tasks, projectHandle, llmConfig);
+      await executeAll(tasks.tasks, projectPath, llmConfig);
     } catch (err) {
       toast.error((err as Error).message);
     }
   }
 
-  if (!projectHandle) {
+  if (!projectPath) {
     return (
       <div className="flex flex-col h-full items-center justify-center gap-4">
         <FolderPicker />

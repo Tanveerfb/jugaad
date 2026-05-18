@@ -57,7 +57,7 @@ export default function NewProjectPage() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Stack selector at top when no plan yet */}
       {!plan && (
-        <div className="border-b border-border px-5 py-4">
+        <div className="border-b border-border px-5 py-4 shrink-0 overflow-y-auto max-h-52">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Tech Stack
           </p>

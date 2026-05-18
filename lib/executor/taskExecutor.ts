@@ -9,13 +9,14 @@ import { streamChat } from "@/lib/llm/client";
 import { buildTaskExecutorPrompt, buildRetryPrompt } from "@/lib/llm/prompts";
 import { validateOutput } from "./validator";
 import { writeFile } from "@/lib/fs/writer";
+import { enforceLatestVersions } from "@/lib/versioning";
 import { useTaskStore } from "@/stores/taskStore";
 import { toast } from "sonner";
 import type { LLMConfig, Task } from "@/types";
 
 export async function executeAll(
   tasks: Task[],
-  projectHandle: FileSystemDirectoryHandle,
+  projectPath: string,
   config: LLMConfig,
 ): Promise<void> {
   const store = useTaskStore.getState();
@@ -76,8 +77,13 @@ export async function executeAll(
       const { valid, error } = validateOutput(task.filePath, fullOutput);
 
       if (valid) {
-        await writeFile(projectHandle, task.filePath, fullOutput);
-        useTaskStore.getState().setTaskOutput(task.id, fullOutput);
+        // Enforce latest package versions in generated package.json
+        const outputToWrite =
+          task.filePath === "package.json"
+            ? enforceLatestVersions(fullOutput)
+            : fullOutput;
+        await writeFile(projectPath, task.filePath, outputToWrite);
+        useTaskStore.getState().setTaskOutput(task.id, outputToWrite);
         useTaskStore.getState().updateTaskStatus(task.id, "done");
         succeeded = true;
         break;

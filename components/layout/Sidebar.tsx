@@ -4,14 +4,13 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import FileTree from "@/components/filesystem/FileTree";
 import FolderPicker from "@/components/filesystem/FolderPicker";
+import FolderBrowser from "@/components/filesystem/FolderBrowser";
 import { useFsStore } from "@/stores/fsStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useAuthStore } from "@/stores/authStore";
 import { listProjects } from "@/lib/firebase/projects";
-import { openBaseFolder } from "@/lib/fs/handle";
 import { rebuildFileTree } from "@/lib/fs/tree";
 import { writeFile } from "@/lib/fs/writer";
-import { toast } from "sonner";
 import { Settings, FolderOpen, Clock } from "lucide-react";
 import Link from "next/link";
 import type { ProjectPlan } from "@/types";
@@ -95,49 +94,49 @@ function RecentProjects() {
 }
 
 export default function Sidebar() {
-  const baseFolderHandle = useFsStore((s) => s.baseFolderHandle);
+  const projectPath = useFsStore((s) => s.projectPath);
+  const setProjectPath = useFsStore((s) => s.setProjectPath);
   const router = useRouter();
+  const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
 
-  async function handleOpenExisting() {
+  async function handleOpenExistingFolder(path: string) {
+    setFolderBrowserOpen(false);
+    setProjectPath(path);
+
+    // Try to load jugaad.json from that folder
     try {
-      const handle = await openBaseFolder();
-      await rebuildFileTree(handle);
-      // Try loading jugaad.json
-      try {
-        const fileHandle = await handle.getFileHandle("jugaad.json");
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        const plan: ProjectPlan = JSON.parse(text);
-        useFsStore.getState().setProjectHandle(handle);
+      const res = await fetch(
+        `/api/fs/read-file?projectPath=${encodeURIComponent(path)}&filePath=jugaad.json`,
+      );
+      if (res.ok) {
+        const { content } = await res.json();
+        const plan: ProjectPlan = JSON.parse(content);
         useProjectPlanStore.getState().setPlan(plan);
+        await rebuildFileTree(path);
         router.push(`/studio/${plan.id}`);
-      } catch {
-        // No jugaad.json — create stub plan
-        const stubPlan: ProjectPlan = {
-          id: crypto.randomUUID(),
-          name: handle.name,
-          description: "",
-          stack: { selected: ["nextjs", "typescript", "tailwind"] },
-          features: [],
-          pages: [],
-          dataModels: [],
-          authStrategy: "none",
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        useFsStore.getState().setProjectHandle(handle);
-        useProjectPlanStore.getState().setPlan(stubPlan);
-        // Write jugaad.json so future opens work
-        await writeFile(
-          handle,
-          "jugaad.json",
-          JSON.stringify(stubPlan, null, 2),
-        );
-        router.push(`/studio/${stubPlan.id}`);
+        return;
       }
     } catch {
-      toast.error("Could not open folder.");
+      // no jugaad.json
     }
+
+    // No jugaad.json — create a stub plan and write it
+    const folderName = path.split(/[\\/]/).filter(Boolean).pop() ?? "project";
+    const stubPlan: ProjectPlan = {
+      id: crypto.randomUUID(),
+      name: folderName,
+      description: "",
+      stack: { selected: ["nextjs", "typescript", "tailwind"] },
+      features: [],
+      pages: [],
+      dataModels: [],
+      authStrategy: "none",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    useProjectPlanStore.getState().setPlan(stubPlan);
+    await writeFile(path, "jugaad.json", JSON.stringify(stubPlan, null, 2));
+    router.push(`/studio/${stubPlan.id}`);
   }
 
   return (
@@ -152,7 +151,7 @@ export default function Sidebar() {
       {/* File tree */}
       <div className="flex-1 overflow-y-auto">
         <Suspense fallback={<LoadingSkeleton lines={6} />}>
-          {baseFolderHandle ? <FileTree /> : <FolderPicker />}
+          {projectPath ? <FileTree /> : <FolderPicker />}
         </Suspense>
       </div>
 
@@ -171,13 +170,20 @@ export default function Sidebar() {
         {/* Open Existing Folder */}
         <button
           type="button"
-          onClick={handleOpenExisting}
+          onClick={() => setFolderBrowserOpen(true)}
           className="flex items-center gap-2 w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <FolderOpen className="h-3.5 w-3.5" />
           Open Existing Folder
         </button>
       </div>
+
+      {folderBrowserOpen && (
+        <FolderBrowser
+          onSelect={handleOpenExistingFolder}
+          onClose={() => setFolderBrowserOpen(false)}
+        />
+      )}
 
       {/* Settings link */}
       <div className="border-t border-border p-2 shrink-0">

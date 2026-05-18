@@ -61,6 +61,14 @@ export const stackOptions: StackOption[] = [
     packageName: "drizzle-orm",
   },
   {
+    id: "firestore",
+    label: "Cloud Firestore",
+    category: "database",
+    default: false,
+    docUrl: "https://firebase.google.com/docs/firestore/quickstart",
+    packageName: "firebase",
+  },
+  {
     id: "nextauth",
     label: "NextAuth.js v5",
     category: "auth",
@@ -75,6 +83,14 @@ export const stackOptions: StackOption[] = [
     default: false,
     docUrl: "https://clerk.com/docs/quickstarts/nextjs",
     packageName: "@clerk/nextjs",
+  },
+  {
+    id: "firebase-auth",
+    label: "Firebase Auth",
+    category: "auth",
+    default: false,
+    docUrl: "https://firebase.google.com/docs/auth/web/start",
+    packageName: "firebase",
   },
   {
     id: "stripe",
@@ -132,10 +148,18 @@ export const stackOptions: StackOption[] = [
     docUrl: "https://resend.com/docs/send-with-nextjs",
     packageName: "resend",
   },
+  {
+    id: "gemini",
+    label: "Gemini AI",
+    category: "utilities",
+    default: false,
+    docUrl: "https://ai.google.dev/gemini-api/docs/quickstart?lang=node",
+    packageName: "@google/generative-ai",
+  },
 ];
 
 // Mutual exclusion groups
-export const DB_IDS = ["prisma", "drizzle"];
-export const AUTH_IDS = ["nextauth", "clerk"];
+export const DB_IDS = ["prisma", "drizzle", "firestore"];
+export const AUTH_IDS = ["nextauth", "clerk", "firebase-auth"];
 // Locked options that cannot be deselected
 export const LOCKED_IDS = ["nextjs", "typescript", "tailwind"];

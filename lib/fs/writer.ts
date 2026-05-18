@@ -1,65 +1,61 @@
-import { rebuildFileTree } from "./tree";
 import { useFsStore } from "@/stores/fsStore";
 
-async function getOrCreateDirHandle(
-  root: FileSystemDirectoryHandle,
-  parts: string[],
-): Promise<FileSystemDirectoryHandle> {
-  let current = root;
-  for (const part of parts) {
-    current = await current.getDirectoryHandle(part, { create: true });
-  }
-  return current;
-}
-
+/**
+ * Write a file via the Next.js server API (/api/fs/write).
+ * Works in all browsers — no File System Access API required.
+ */
 export async function writeFile(
-  root: FileSystemDirectoryHandle,
+  projectPath: string,
   filePath: string,
   content: string,
 ): Promise<void> {
-  const parts = filePath.split("/");
-  const fileName = parts.pop()!;
-  const dirHandle =
-    parts.length > 0 ? await getOrCreateDirHandle(root, parts) : root;
+  const res = await fetch("/api/fs/write", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectPath, filePath, content }),
+  });
 
-  const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(content);
-  await writable.close();
+  if (!res.ok) {
+    const { error } = await res.json().catch(() => ({ error: "Write failed" }));
+    throw new Error(error ?? "Write failed");
+  }
 
-  await rebuildFileTree(root);
+  // Refresh the file tree in the sidebar
+  await rebuildFileTree(projectPath);
 }
 
+/**
+ * Read a file via the Next.js server API (/api/fs/read-file).
+ */
 export async function readFile(
-  root: FileSystemDirectoryHandle,
+  projectPath: string,
   filePath: string,
 ): Promise<string> {
-  const parts = filePath.split("/");
-  const fileName = parts.pop()!;
+  const res = await fetch(
+    `/api/fs/read-file?projectPath=${encodeURIComponent(projectPath)}&filePath=${encodeURIComponent(filePath)}`,
+  );
 
-  let dirHandle = root;
-  for (const part of parts) {
-    dirHandle = await dirHandle.getDirectoryHandle(part);
+  if (!res.ok) {
+    const { error } = await res.json().catch(() => ({ error: "Read failed" }));
+    throw new Error(error ?? "Read failed");
   }
 
-  const fileHandle = await dirHandle.getFileHandle(fileName);
-  const file = await fileHandle.getFile();
-  return file.text();
+  const { content } = await res.json();
+  return content as string;
 }
 
-export async function deleteFile(
-  root: FileSystemDirectoryHandle,
-  filePath: string,
-): Promise<void> {
-  const parts = filePath.split("/");
-  const fileName = parts.pop()!;
-
-  let dirHandle = root;
-  for (const part of parts) {
-    dirHandle = await dirHandle.getDirectoryHandle(part);
+/**
+ * Rebuild the file tree by calling the server API and updating the store.
+ */
+async function rebuildFileTree(projectPath: string): Promise<void> {
+  try {
+    const res = await fetch(
+      `/api/fs/tree?projectPath=${encodeURIComponent(projectPath)}`,
+    );
+    if (!res.ok) return;
+    const { tree } = await res.json();
+    useFsStore.getState().setFileTree(tree);
+  } catch {
+    // Non-fatal — tree will refresh on next interaction
   }
-
-  await dirHandle.removeEntry(fileName);
-
-  await rebuildFileTree(root);
 }

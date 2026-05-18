@@ -1,41 +1,22 @@
 import type { FileTreeNode } from "@/types";
 import { useFsStore } from "@/stores/fsStore";
 
-export async function buildTree(
-  handle: FileSystemDirectoryHandle,
-  path = "",
-): Promise<FileTreeNode[]> {
-  const nodes: FileTreeNode[] = [];
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for await (const [name, entry] of (handle as any).entries()) {
-    const nodePath = path ? `${path}/${name}` : name;
-    if (entry.kind === "directory") {
-      const children = await buildTree(
-        entry as FileSystemDirectoryHandle,
-        nodePath,
-      );
-      nodes.push({ name, path: nodePath, type: "directory", children });
-    } else {
-      nodes.push({ name, path: nodePath, type: "file" });
-    }
-  }
-
-  return nodes.sort((a, b) => {
-    if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-}
-
 /**
- * Rebuild the file tree from root, store in fsStore, and return it.
+ * Rebuild the file tree by calling the server API and updating the store.
  */
 export async function rebuildFileTree(
-  root: FileSystemDirectoryHandle,
+  projectPath: string,
 ): Promise<FileTreeNode[]> {
-  const tree = await buildTree(root);
+  const res = await fetch(
+    `/api/fs/tree?projectPath=${encodeURIComponent(projectPath)}`,
+  );
+  if (!res.ok) {
+    const { error } = await res.json().catch(() => ({ error: "Tree failed" }));
+    throw new Error(error ?? "Tree failed");
+  }
+  const { tree } = await res.json();
   useFsStore.getState().setFileTree(tree);
-  return tree;
+  return tree as FileTreeNode[];
 }
 
 /**

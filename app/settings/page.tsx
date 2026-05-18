@@ -6,9 +6,8 @@ export const dynamic = "force-dynamic";
 import { useLLMConfigStore } from "@/stores/llmConfigStore";
 import { useAuthStore } from "@/stores/authStore";
 import { fetchModels, LLMConnectionError } from "@/lib/llm/client";
-import { getStoredFolderName } from "@/stores/fsStore";
-import { openBaseFolder } from "@/lib/fs/handle";
-import { rebuildFileTree } from "@/lib/fs/tree";
+import { useFsStore } from "@/stores/fsStore";
+import FolderBrowser from "@/components/filesystem/FolderBrowser";
 import { signOut } from "@/lib/firebase/authHelpers";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -30,15 +29,13 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const [status, setStatus] = useState<ConnectionStatus>("idle");
   const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [folderName, setFolderName] = useState<string | null>(null);
+  const baseFolderName = useFsStore((s) => s.baseFolderName);
+  const setProjectPath = useFsStore((s) => s.setProjectPath);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
+  const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
   // Track the last baseUrl checked so we don't double-fire on first render
   const lastChecked = useRef<string>("");
-
-  useEffect(() => {
-    setFolderName(getStoredFolderName());
-  }, []);
 
   const checkConnection = useCallback(
     async (baseUrl: string, silent = false) => {
@@ -49,7 +46,7 @@ export default function SettingsPage() {
         setStatus("ok");
         setAvailableModels(models);
         if (!silent)
-          toast.success(`Connected â€” ${models.length} model(s) found.`);
+          toast.success(`Connected \u2014 ${models.length} model(s) found.`);
       } catch (err) {
         setStatus("fail");
         const msg =
@@ -69,15 +66,10 @@ export default function SettingsPage() {
     checkConnection(store.baseUrl, true);
   }, [store.provider, store.baseUrl, checkConnection]);
 
-  async function handleChangeFolder() {
-    try {
-      const handle = await openBaseFolder();
-      await rebuildFileTree(handle);
-      setFolderName(handle.name);
-      toast.success(`Folder set: ${handle.name}`);
-    } catch {
-      // user cancelled or denied
-    }
+  function handleFolderSelect(path: string) {
+    setProjectPath(path);
+    setFolderBrowserOpen(false);
+    toast.success(`Folder set: ${path.split(/[\\/]/).filter(Boolean).pop()}`);
   }
 
   async function handleSignOut() {
@@ -92,7 +84,7 @@ export default function SettingsPage() {
     }
     localStorage.clear();
     sessionStorage.clear();
-    toast.success("All local data cleared. Reloadingâ€¦");
+    toast.success("All local data cleared. Reloading...");
     setTimeout(() => window.location.reload(), 1200);
   }
 
@@ -154,7 +146,7 @@ export default function SettingsPage() {
             <>
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               <span className="text-muted-foreground">
-                Checking connectionâ€¦
+                Checking connection...
               </span>
             </>
           )}
@@ -162,7 +154,7 @@ export default function SettingsPage() {
             <>
               <CheckCircle className="h-4 w-4 text-green-500" />
               <span className="text-green-500">
-                Connected Â· {availableModels.length} model
+                Connected &middot; {availableModels.length} model
                 {availableModels.length !== 1 ? "s" : ""} available
               </span>
             </>
@@ -262,19 +254,26 @@ export default function SettingsPage() {
           File System
         </h2>
         <p className="text-sm text-muted-foreground">
-          Current base folder:{" "}
+          Current folder:{" "}
           <code className="text-xs bg-muted rounded px-1.5 py-0.5">
-            {folderName ?? "Not set"}
+            {baseFolderName ?? "Not set"}
           </code>
         </p>
         <Button
           variant="outline"
-          onClick={handleChangeFolder}
+          onClick={() => setFolderBrowserOpen(true)}
           className="flex items-center gap-2"
         >
           <FolderOpen className="h-4 w-4" />
           Change Folder
         </Button>
+
+        {folderBrowserOpen && (
+          <FolderBrowser
+            onSelect={handleFolderSelect}
+            onClose={() => setFolderBrowserOpen(false)}
+          />
+        )}
       </section>
 
       {/* â”€â”€ Account Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}

@@ -26,10 +26,10 @@ const CATEGORY_LABELS: Record<StackOption["category"], string> = {
 export default function StackSelector() {
   const plan = useProjectPlanStore((s) => s.plan);
   const updatePlan = useProjectPlanStore((s) => s.updatePlan);
+  const pendingStack = useProjectPlanStore((s) => s.pendingStack);
+  const setPendingStack = useProjectPlanStore((s) => s.setPendingStack);
 
-  const selected: string[] = plan?.stack.selected ?? [
-    ...stackOptions.filter((o) => o.default).map((o) => o.id),
-  ];
+  const selected: string[] = plan?.stack.selected ?? pendingStack.selected;
 
   function toggle(id: string) {
     if (LOCKED_IDS.includes(id)) return;
@@ -47,7 +47,11 @@ export default function StackSelector() {
       next = next.filter((s) => !AUTH_IDS.includes(s) || s === id);
     }
 
-    updatePlan({ stack: { selected: next } });
+    if (plan) {
+      updatePlan({ stack: { selected: next } });
+    } else {
+      setPendingStack({ selected: next });
+    }
   }
 
   return (
