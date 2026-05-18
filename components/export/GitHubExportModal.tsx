@@ -19,7 +19,7 @@ type Props = {
 
 export default function GitHubExportModal({ isOpen, onClose }: Props) {
   const plan = useProjectPlanStore((s) => s.plan);
-  const projectHandle = useFsStore((s) => s.projectHandle);
+  const projectPath = useFsStore((s) => s.projectPath);
 
   const [repoName, setRepoName] = useState("");
   const [description, setDescription] = useState("");
@@ -51,7 +51,7 @@ export default function GitHubExportModal({ isOpen, onClose }: Props) {
   if (!isOpen) return null;
 
   async function handlePush() {
-    if (!projectHandle) {
+    if (!projectPath) {
       toast.error("No project folder selected.");
       return;
     }
@@ -74,7 +74,7 @@ export default function GitHubExportModal({ isOpen, onClose }: Props) {
       setStepLabel("Uploading files...");
 
       const { repoUrl: url } = await exportToGitHub({
-        projectHandle,
+        projectPath,
         repoName: repoName.trim(),
         description: description.trim(),
         token: token.trim(),

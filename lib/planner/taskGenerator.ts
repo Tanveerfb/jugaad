@@ -90,9 +90,47 @@ export async function generateTasks(
   const parsed = JSON.parse(match[1].trim());
   const tasks = z.array(TaskSchema).parse(parsed) as Task[];
 
+  // Step 5b: Repair broken dependsOn references.
+  // The LLM sometimes uses inconsistent IDs (e.g. "schema-1" when the actual task ID
+  // is "state-1"). Build a filePath→id lookup and remap any unknown dep IDs.
+  const filePathToId = new Map(tasks.map((t) => [t.filePath, t.id]));
+  const validIds = new Set(tasks.map((t) => t.id));
+  // Build a "stem" lookup: normalise each task's filePath to a short key for fuzzy matching
+  const stemToId = new Map(
+    tasks.map((t) => {
+      const stem = t.filePath
+        .replace(/^.*[/\\]/, "")
+        .replace(/\.[^.]+$/, "")
+        .toLowerCase();
+      return [stem, t.id];
+    }),
+  );
+  const repairedTasks = tasks.map((task) => {
+    const repairedDeps = task.dependsOn.filter((dep) => {
+      if (validIds.has(dep)) return true;
+      // Attempt to remap: the LLM may have used a filePath or a slug derived from the title
+      const byPath = filePathToId.get(dep);
+      if (byPath) {
+        task.dependsOn = task.dependsOn.map((d) => (d === dep ? byPath : d));
+        return true;
+      }
+      const byStem = stemToId.get(dep.toLowerCase());
+      if (byStem) {
+        task.dependsOn = task.dependsOn.map((d) => (d === dep ? byStem : d));
+        return true;
+      }
+      // Unknown dep — drop it rather than halting the whole build
+      console.warn(
+        `[taskGenerator] dropping unknown dep "${dep}" from task "${task.id}"`,
+      );
+      return false;
+    });
+    return { ...task, dependsOn: repairedDeps };
+  });
+
   // Step 6: Assign doc context slices per task
   const allDocIds = plan.stack.selected;
-  const tasksWithDocs = tasks.map((task) => {
+  const tasksWithDocs = repairedTasks.map((task) => {
     const relevantIds = getRelevantDocIds(task.filePath, allDocIds);
     const relevantOptions = selectedOptions.filter((o) =>
       relevantIds.includes(o.id),
@@ -103,7 +141,20 @@ export async function generateTasks(
     return { ...task, docsContext: taskDocsContext };
   });
 
-  // Step 7: Return
+  // Step 7: Append uncancellable system fix task
+  const systemTask: Task = {
+    id: "__system_fix__",
+    title: "Fix errors & install dependencies",
+    filePath: "package.json",
+    instruction:
+      "SYSTEM: Scan all generated files and output a corrected package.json that includes every npm package imported in the project. See the system prompt for exact version requirements.",
+    dependsOn: tasksWithDocs.map((t) => t.id),
+    docsContext: "",
+    status: "pending",
+    retryCount: 0,
+    isSystem: true,
+  };
+
   onProgress("Task list ready.");
-  return tasksWithDocs;
+  return [...tasksWithDocs, systemTask];
 }

@@ -17,15 +17,15 @@ type NodeProps = {
 function FileNode({ node, depth }: NodeProps) {
   const [open, setOpen] = useState(true);
   const tasks = useTaskStore((s) => s.tasks);
-  const projectHandle = useFsStore((s) => s.projectHandle);
+  const projectPath = useFsStore((s) => s.activeProjectPath ?? s.projectPath);
   const selectFile = useFsStore((s) => s.selectFile);
   const selectedFilePath = useFsStore((s) => s.selectedFilePath);
 
   const taskForFile = tasks.find((t) => t.filePath === node.path);
 
   async function handleFileClick() {
-    if (!projectHandle) return;
-    const content = await readFile(projectHandle, node.path);
+    if (!projectPath) return;
+    const content = await readFile(projectPath, node.path);
     selectFile(node.path, content);
   }
 

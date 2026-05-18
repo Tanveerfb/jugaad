@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import appConfig from "@/app.config";
 import { Button } from "@/components/ui/button";
 import { stackOptions } from "@/components/stack/stackRegistry";
+import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import {
   ArrowRight,
   GitBranch,
@@ -13,6 +14,7 @@ import {
   Layers,
   Code2,
   FolderOpen,
+  ChevronRight,
 } from "lucide-react";
 
 const fadeUp = {
@@ -44,6 +46,8 @@ const steps = [
 ];
 
 export default function Home() {
+  const plan = useProjectPlanStore((s) => s.plan);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* ── Hero ──────────────────────────────────────────────── */}
@@ -116,6 +120,40 @@ export default function Home() {
           </motion.p>
         </motion.div>
       </main>
+
+      {/* ── Recent Project ───────────────────────────────────── */}
+      {plan && (
+        <section className="border-t border-border px-6 py-8">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+            >
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                Resume where you left off
+              </h2>
+              <Link
+                href={`/studio/${plan.id}`}
+                className="flex items-center justify-between rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors px-5 py-4 group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 shrink-0">
+                    <Code2 className="h-4.5 w-4.5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{plan.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                      {plan.description}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── How it works ─────────────────────────────────────── */}
       <section className="border-t border-border px-6 py-16">

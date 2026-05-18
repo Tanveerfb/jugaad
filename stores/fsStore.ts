@@ -12,10 +12,16 @@ type FsStore = {
   /** Absolute path to the project output folder (persisted). */
   projectPath: string | null;
   baseFolderName: string | null;
+  /**
+   * Resolved effective path for the CURRENT build (outputFolder/project-slug).
+   * Set at the start of executeAll; not persisted.
+   */
+  activeProjectPath: string | null;
   fileTree: FileTreeNode[];
   selectedFilePath: string | null;
   selectedFileContent: string | null;
   setProjectPath: (path: string) => void;
+  setActiveProjectPath: (path: string) => void;
   setFileTree: (tree: FileTreeNode[]) => void;
   selectFile: (path: string, content: string) => void;
   clearSelection: () => void;
@@ -27,6 +33,7 @@ export const useFsStore = create<FsStore>()(
     (set) => ({
       projectPath: null,
       baseFolderName: null,
+      activeProjectPath: null,
       fileTree: [],
       selectedFilePath: null,
       selectedFileContent: null,
@@ -36,6 +43,7 @@ export const useFsStore = create<FsStore>()(
           baseFolderName: path.split(/[\\/]/).filter(Boolean).pop() ?? path,
           fileTree: [],
         }),
+      setActiveProjectPath: (path) => set({ activeProjectPath: path }),
       setFileTree: (tree) => set({ fileTree: tree }),
       selectFile: (path, content) =>
         set({ selectedFilePath: path, selectedFileContent: content }),
@@ -45,6 +53,7 @@ export const useFsStore = create<FsStore>()(
         set({
           projectPath: null,
           baseFolderName: null,
+          activeProjectPath: null,
           fileTree: [],
           selectedFilePath: null,
           selectedFileContent: null,

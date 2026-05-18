@@ -15,7 +15,7 @@ const appConfig = {
       lmstudioBaseUrl: "http://localhost:1234",
       model: "qwen3.5:latest",
       temperature: 0.3,
-      maxTokens: 4096,
+      maxTokens: -1,
     },
     output: {
       framework: "nextjs",

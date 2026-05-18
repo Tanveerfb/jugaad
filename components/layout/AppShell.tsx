@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/shared/BrandLogo";
 import ProviderBadge from "@/components/shared/ProviderBadge";
+import ModelSwitcher from "@/components/shared/ModelSwitcher";
 import GitHubExportModal from "@/components/export/GitHubExportModal";
 import { Settings, Download, GitBranch, Loader2 } from "lucide-react";
 import appConfig from "@/app.config";
@@ -17,17 +18,17 @@ import { signOut } from "@/lib/firebase/authHelpers";
 import { toast } from "sonner";
 
 function TopBar() {
-  const projectHandle = useFsStore((s) => s.projectHandle);
+  const projectPath = useFsStore((s) => s.activeProjectPath ?? s.projectPath);
   const plan = useProjectPlanStore((s) => s.plan);
   const user = useAuthStore((s) => s.user);
   const [githubOpen, setGithubOpen] = useState(false);
   const [zipping, setZipping] = useState(false);
 
   async function handleZipExport() {
-    if (!projectHandle || !plan) return;
+    if (!projectPath || !plan) return;
     setZipping(true);
     try {
-      await exportToZip(projectHandle, plan.name);
+      await exportToZip(projectPath, plan.name);
     } finally {
       setZipping(false);
     }
@@ -53,9 +54,10 @@ function TopBar() {
         </div>
         <div className="flex items-center gap-2">
           <ProviderBadge />
+          <ModelSwitcher />
 
           {/* Export buttons — only shown when project folder is selected */}
-          {projectHandle && (
+          {projectPath && (
             <>
               <Button
                 variant="ghost"

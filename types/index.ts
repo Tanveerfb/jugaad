@@ -66,6 +66,8 @@ export type Task = {
   output?: string;
   error?: string;
   retryCount: number;
+  /** Auto-generated system task — cannot be skipped or removed by the user. */
+  isSystem?: boolean;
 };
 
 export type ConversationMessage = {

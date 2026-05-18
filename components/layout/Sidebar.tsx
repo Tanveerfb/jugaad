@@ -1,118 +1,50 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import FileTree from "@/components/filesystem/FileTree";
 import FolderPicker from "@/components/filesystem/FolderPicker";
 import FolderBrowser from "@/components/filesystem/FolderBrowser";
+import ProjectBrowser from "@/components/projects/ProjectBrowser";
 import { useFsStore } from "@/stores/fsStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
-import { useAuthStore } from "@/stores/authStore";
-import { listProjects } from "@/lib/firebase/projects";
 import { rebuildFileTree } from "@/lib/fs/tree";
 import { writeFile } from "@/lib/fs/writer";
-import { Settings, FolderOpen, Clock } from "lucide-react";
+import { Settings, FolderOpen, Files, Layers } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import type { ProjectPlan } from "@/types";
 import LoadingSkeleton from "@/components/shared/LoadingSkeleton";
 
-function timeAgo(ts: number): string {
-  const secs = Math.floor((Date.now() - ts) / 1000);
-  if (secs < 60) return "just now";
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function RecentProjects() {
-  const [projects, setProjects] = useState<ProjectPlan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const user = useAuthStore((s) => s.user);
-  const setPlan = useProjectPlanStore((s) => s.setPlan);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    listProjects(user.uid)
-      .then(setProjects)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [user]);
-
-  if (!user) {
-    return (
-      <p className="px-3 py-2 text-xs text-muted-foreground">
-        <Link
-          href="#"
-          className="text-primary hover:underline"
-          onClick={() => {}}
-        >
-          Sign in
-        </Link>{" "}
-        to sync projects
-      </p>
-    );
-  }
-
-  if (loading) return <LoadingSkeleton lines={3} />;
-
-  if (projects.length === 0) {
-    return (
-      <p className="px-3 py-2 text-xs text-muted-foreground">No projects yet</p>
-    );
-  }
-
-  async function handleOpen(project: ProjectPlan) {
-    setPlan(project);
-    router.push(`/studio/${project.id}`);
-  }
-
-  return (
-    <ul className="space-y-0.5">
-      {projects.map((p) => (
-        <li key={p.id}>
-          <button
-            type="button"
-            onClick={() => handleOpen(p)}
-            className="w-full text-left px-3 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
-          >
-            <p className="text-xs font-medium truncate">{p.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {timeAgo(p.updatedAt)}
-            </p>
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
+type Tab = "files" | "projects";
 
 export default function Sidebar() {
   const projectPath = useFsStore((s) => s.projectPath);
+  const activeProjectPath = useFsStore((s) => s.activeProjectPath);
   const setProjectPath = useFsStore((s) => s.setProjectPath);
+  const setActiveProjectPath = useFsStore((s) => s.setActiveProjectPath);
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<Tab>("projects");
   const [folderBrowserOpen, setFolderBrowserOpen] = useState(false);
 
-  async function handleOpenExistingFolder(path: string) {
+  // The path to read/display files for — project subfolder when available
+  const displayPath = activeProjectPath ?? projectPath;
+
+  async function handleOpenExistingFolder(folderPath: string) {
     setFolderBrowserOpen(false);
-    setProjectPath(path);
+    setActiveProjectPath(folderPath);
 
     // Try to load jugaad.json from that folder
     try {
       const res = await fetch(
-        `/api/fs/read-file?projectPath=${encodeURIComponent(path)}&filePath=jugaad.json`,
+        `/api/fs/read-file?projectPath=${encodeURIComponent(folderPath)}&filePath=jugaad.json`,
       );
       if (res.ok) {
-        const { content } = await res.json();
-        const plan: ProjectPlan = JSON.parse(content);
+        const { content } = (await res.json()) as { content: string };
+        const plan = JSON.parse(content) as ProjectPlan;
         useProjectPlanStore.getState().setPlan(plan);
-        await rebuildFileTree(path);
+        await rebuildFileTree(folderPath);
+        setActiveTab("files");
         router.push(`/studio/${plan.id}`);
         return;
       }
@@ -121,7 +53,8 @@ export default function Sidebar() {
     }
 
     // No jugaad.json — create a stub plan and write it
-    const folderName = path.split(/[\\/]/).filter(Boolean).pop() ?? "project";
+    const folderName =
+      folderPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
     const stubPlan: ProjectPlan = {
       id: crypto.randomUUID(),
       name: folderName,
@@ -135,47 +68,81 @@ export default function Sidebar() {
       updatedAt: Date.now(),
     };
     useProjectPlanStore.getState().setPlan(stubPlan);
-    await writeFile(path, "jugaad.json", JSON.stringify(stubPlan, null, 2));
+    await writeFile(
+      folderPath,
+      "jugaad.json",
+      JSON.stringify(stubPlan, null, 2),
+    );
+    setProjectPath(folderPath);
+    setActiveTab("files");
     router.push(`/studio/${stubPlan.id}`);
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* File tree header */}
-      <div className="px-3 py-2.5 border-b border-border shrink-0">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      {/* Tab switcher */}
+      <div className="flex border-b border-border shrink-0">
+        <button
+          type="button"
+          onClick={() => setActiveTab("files")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors",
+            activeTab === "files"
+              ? "text-foreground border-b-2 border-primary -mb-px"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Files className="h-3.5 w-3.5" />
           Files
-        </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("projects")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors",
+            activeTab === "projects"
+              ? "text-foreground border-b-2 border-primary -mb-px"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          Projects
+        </button>
       </div>
 
-      {/* File tree */}
-      <div className="flex-1 overflow-y-auto">
-        <Suspense fallback={<LoadingSkeleton lines={6} />}>
-          {projectPath ? <FileTree /> : <FolderPicker />}
-        </Suspense>
+      {/* Tab content */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {activeTab === "files" ? (
+          <div className="flex-1 overflow-y-auto">
+            <Suspense fallback={<LoadingSkeleton lines={6} />}>
+              {displayPath ? <FileTree /> : <FolderPicker />}
+            </Suspense>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            <ProjectBrowser onProjectOpen={() => setActiveTab("files")} />
+          </div>
+        )}
       </div>
 
-      {/* Recent Projects */}
-      <div className="border-t border-border">
-        <div className="px-3 pt-2.5 pb-1 flex items-center gap-1.5">
-          <Clock className="h-3 w-3 text-muted-foreground" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Recent
-          </p>
-        </div>
-        <Suspense fallback={<LoadingSkeleton lines={3} />}>
-          <RecentProjects />
-        </Suspense>
-
-        {/* Open Existing Folder */}
+      {/* Bottom actions */}
+      <div className="border-t border-border shrink-0">
         <button
           type="button"
           onClick={() => setFolderBrowserOpen(true)}
           className="flex items-center gap-2 w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <FolderOpen className="h-3.5 w-3.5" />
-          Open Existing Folder
+          Open Folder
         </button>
+
+        <Link
+          href="/settings"
+          className="flex items-center gap-2 rounded-md mx-1 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+        >
+          <Settings className="h-4 w-4" />
+          Settings
+        </Link>
       </div>
 
       {folderBrowserOpen && (
@@ -184,17 +151,6 @@ export default function Sidebar() {
           onClose={() => setFolderBrowserOpen(false)}
         />
       )}
-
-      {/* Settings link */}
-      <div className="border-t border-border p-2 shrink-0">
-        <Link
-          href="/settings"
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Link>
-      </div>
     </div>
   );
 }

@@ -2,11 +2,12 @@
 
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { Button } from "@/components/ui/button";
-import { Edit2, CheckCircle } from "lucide-react";
+import { Edit2, CheckCircle, RotateCcw } from "lucide-react";
 import type { ProjectPlan } from "@/types";
 
 type PlanSummaryProps = {
   onEdit: () => void;
+  onStartOver: () => void;
   onConfirm: () => void;
 };
 
@@ -27,7 +28,11 @@ function Section({
   );
 }
 
-export default function PlanSummary({ onEdit, onConfirm }: PlanSummaryProps) {
+export default function PlanSummary({
+  onEdit,
+  onStartOver,
+  onConfirm,
+}: PlanSummaryProps) {
   const plan = useProjectPlanStore((s) => s.plan) as ProjectPlan;
 
   if (!plan) return null;
@@ -94,15 +99,26 @@ export default function PlanSummary({ onEdit, onConfirm }: PlanSummaryProps) {
         </Section>
       )}
 
-      <div className="flex gap-2 pt-2">
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-          Edit
+      <div className="flex items-center justify-between pt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onStartOver}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          Start Over
         </Button>
-        <Button size="sm" onClick={onConfirm}>
-          <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-          Confirm & Generate Tasks
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+            Edit Plan
+          </Button>
+          <Button size="sm" onClick={onConfirm}>
+            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+            Confirm &amp; Generate Tasks
+          </Button>
+        </div>
       </div>
     </div>
   );

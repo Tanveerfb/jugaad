@@ -3,6 +3,7 @@
 import StackSelector from "@/components/stack/StackSelector";
 import ChatInterface from "@/components/agent/ChatInterface";
 import PlanSummary from "@/components/agent/PlanSummary";
+import PlanEditor from "@/components/agent/PlanEditor";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useLLMConfigStore } from "@/stores/llmConfigStore";
@@ -24,15 +25,16 @@ export default function NewProjectPage() {
   const user = useAuthStore((s) => s.user);
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
 
   async function handleConfirm() {
     if (!plan) return;
-    confirmPlan();
     setIsGenerating(true);
     try {
       const tasks = await generateTasks(plan, llmConfig, setStatus);
-      setTasks(tasks);
+      setTasks(tasks, plan.id);
+      confirmPlan();
       toast.success(`Generated ${tasks.length} tasks`);
 
       // Save to Firestore (non-blocking — don't block navigation on errors)
@@ -65,15 +67,46 @@ export default function NewProjectPage() {
         </div>
       )}
 
+      {/* Start-over banner when arriving at /new with an already-confirmed plan */}
+      {plan && isPlanConfirmed && (
+        <div className="border-b border-border px-5 py-2.5 shrink-0 flex items-center justify-between bg-muted/40">
+          <p className="text-xs text-muted-foreground">
+            You have a confirmed plan for{" "}
+            <span className="font-medium text-foreground">{plan.name}</span>.
+            Describe a new app below or start over.
+          </p>
+          <button
+            onClick={resetPlan}
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            Start Over
+          </button>
+        </div>
+      )}
+
       {/* Chat area */}
       <div className="flex-1 overflow-hidden relative">
         <ChatInterface />
       </div>
 
-      {/* Plan summary + confirm */}
-      {plan && !isPlanConfirmed && (
+      {/* Plan editor (inline edit mode) */}
+      {plan && !isPlanConfirmed && isEditing && (
         <div className="border-t border-border p-4">
-          <PlanSummary onEdit={resetPlan} onConfirm={handleConfirm} />
+          <PlanEditor
+            onSave={() => setIsEditing(false)}
+            onCancel={() => setIsEditing(false)}
+          />
+        </div>
+      )}
+
+      {/* Plan summary + confirm */}
+      {plan && !isPlanConfirmed && !isEditing && (
+        <div className="border-t border-border p-4">
+          <PlanSummary
+            onEdit={() => setIsEditing(true)}
+            onStartOver={resetPlan}
+            onConfirm={handleConfirm}
+          />
         </div>
       )}
 

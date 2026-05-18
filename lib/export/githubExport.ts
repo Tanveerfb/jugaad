@@ -1,39 +1,25 @@
 // @octokit/rest MUST always be a dynamic import — never static
 
 type ExportParams = {
-  projectHandle: FileSystemDirectoryHandle;
+  projectPath: string;
   repoName: string;
   description: string;
   token: string;
   isPrivate: boolean;
 };
 
-async function collectFiles(
-  handle: FileSystemDirectoryHandle,
-  prefix = "",
-): Promise<{ path: string; content: string }[]> {
-  const files: { path: string; content: string }[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for await (const [name, entry] of (handle as any).entries()) {
-    const entryPath = prefix ? `${prefix}/${name}` : name;
-    if (entry.kind === "directory") {
-      const nested = await collectFiles(
-        entry as FileSystemDirectoryHandle,
-        entryPath,
-      );
-      files.push(...nested);
-    } else {
-      const file = await (entry as FileSystemFileHandle).getFile();
-      const content = await file.text();
-      files.push({ path: entryPath, content });
-    }
-  }
-  return files;
-}
-
 export async function exportToGitHub(
   params: ExportParams,
 ): Promise<{ repoUrl: string }> {
+  // Fetch all files from server API
+  const res = await fetch(
+    `/api/fs/export?projectPath=${encodeURIComponent(params.projectPath)}`,
+  );
+  if (!res.ok) throw new Error("Failed to read project files for export");
+  const { files } = (await res.json()) as {
+    files: { path: string; content: string }[];
+  };
+
   const { Octokit } = await import("@octokit/rest");
   const octokit = new Octokit({ auth: params.token });
 
@@ -47,9 +33,6 @@ export async function exportToGitHub(
 
   const owner = repoResponse.data.owner.login;
   const repo = repoResponse.data.name;
-
-  // Step 2: Collect all files
-  const files = await collectFiles(params.projectHandle);
 
   // Step 3: Create blobs
   const blobs = await Promise.all(

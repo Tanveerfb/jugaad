@@ -31,7 +31,7 @@ export const useProjectPlanStore = create<ProjectPlanStore>()(
       conversation: [],
       isPlanning: false,
       isPlanConfirmed: false,
-      setPlan: (plan) => set({ plan }),
+      setPlan: (plan) => set({ plan, isPlanConfirmed: false }),
       updatePlan: (partial) =>
         set((state) =>
           state.plan ? { plan: { ...state.plan, ...partial } } : {},

@@ -1,32 +1,23 @@
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
 
-async function addFolderToZip(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  zip: any,
-  handle: FileSystemDirectoryHandle,
-  prefix = "",
-): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for await (const [name, entry] of (handle as any).entries()) {
-    const entryPath = prefix ? `${prefix}/${name}` : name;
-    if (entry.kind === "directory") {
-      await addFolderToZip(zip, entry as FileSystemDirectoryHandle, entryPath);
-    } else {
-      const file = await (entry as FileSystemFileHandle).getFile();
-      const content = await file.text();
-      zip.file(entryPath, content);
-    }
-  }
-}
-
 export async function exportToZip(
-  projectHandle: FileSystemDirectoryHandle,
+  projectPath: string,
   projectName: string,
 ): Promise<void> {
+  const res = await fetch(
+    `/api/fs/export?projectPath=${encodeURIComponent(projectPath)}`,
+  );
+  if (!res.ok) throw new Error("Failed to read project files for export");
+  const { files } = (await res.json()) as {
+    files: { path: string; content: string }[];
+  };
+
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
-  await addFolderToZip(zip, projectHandle);
+  for (const { path, content } of files) {
+    zip.file(path, content);
+  }
   const blob = await zip.generateAsync({
     type: "blob",
     compression: "DEFLATE",
