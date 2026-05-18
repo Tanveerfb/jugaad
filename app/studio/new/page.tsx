@@ -6,7 +6,9 @@ import PlanSummary from "@/components/agent/PlanSummary";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useTaskStore } from "@/stores/taskStore";
 import { useLLMConfigStore } from "@/stores/llmConfigStore";
+import { useAuthStore } from "@/stores/authStore";
 import { generateTasks } from "@/lib/planner/taskGenerator";
+import { saveProject } from "@/lib/firebase/projects";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +21,7 @@ export default function NewProjectPage() {
   const resetPlan = useProjectPlanStore((s) => s.resetPlan);
   const setTasks = useTaskStore((s) => s.setTasks);
   const llmConfig = useLLMConfigStore();
+  const user = useAuthStore((s) => s.user);
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState("");
   const router = useRouter();
@@ -31,6 +34,16 @@ export default function NewProjectPage() {
       const tasks = await generateTasks(plan, llmConfig, setStatus);
       setTasks(tasks);
       toast.success(`Generated ${tasks.length} tasks`);
+
+      // Save to Firestore (non-blocking — don't block navigation on errors)
+      if (user) {
+        saveProject(plan, user.uid).catch(() => {
+          toast.warning(
+            "Could not save project to cloud — your files are safe locally",
+          );
+        });
+      }
+
       router.push(`/studio/${plan.id}`);
     } catch (err) {
       toast.error(`Failed to generate tasks: ${(err as Error).message}`);

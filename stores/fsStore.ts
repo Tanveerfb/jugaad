@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import type { FileTreeNode } from "@/types";
 
+const FS_FOLDER_NAME_KEY = "jugaad-base-folder-name";
+
+export function getStoredFolderName(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(FS_FOLDER_NAME_KEY);
+}
+
+export function setStoredFolderName(name: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(FS_FOLDER_NAME_KEY, name);
+}
+
 type FsStore = {
   baseFolderHandle: FileSystemDirectoryHandle | null;
   projectHandle: FileSystemDirectoryHandle | null;

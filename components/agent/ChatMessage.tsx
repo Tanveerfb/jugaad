@@ -34,7 +34,15 @@ export default function ChatMessage({ message }: ChatMessageProps) {
       >
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
-          className="prose prose-sm dark:prose-invert max-w-none"
+          components={{
+            // Wrap root output in a styled div since className on ReactMarkdown is unsupported in v10+
+            p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+            code: ({ children }) => (
+              <code className="text-xs bg-black/20 rounded px-1">
+                {children}
+              </code>
+            ),
+          }}
         >
           {message.content}
         </ReactMarkdown>

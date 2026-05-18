@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import BrowserWarning from "@/components/shared/BrowserWarning";
 import "./globals.css";
 import appConfig from "@/app.config";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
+        <BrowserWarning />
         {children}
         <Toaster richColors position="bottom-right" />
       </body>

@@ -1,4 +1,4 @@
-import { buildTree } from "./tree";
+import { rebuildFileTree } from "./tree";
 import { useFsStore } from "@/stores/fsStore";
 
 async function getOrCreateDirHandle(
@@ -27,8 +27,7 @@ export async function writeFile(
   await writable.write(content);
   await writable.close();
 
-  const tree = await buildTree(root);
-  useFsStore.getState().setFileTree(tree);
+  await rebuildFileTree(root);
 }
 
 export async function readFile(
@@ -62,6 +61,5 @@ export async function deleteFile(
 
   await dirHandle.removeEntry(fileName);
 
-  const tree = await buildTree(root);
-  useFsStore.getState().setFileTree(tree);
+  await rebuildFileTree(root);
 }

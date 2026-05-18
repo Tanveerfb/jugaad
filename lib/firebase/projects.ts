@@ -1,5 +1,4 @@
 import {
-  getFirestore,
   collection,
   doc,
   setDoc,
@@ -8,28 +7,118 @@ import {
   deleteDoc,
   query,
   orderBy,
+  limit,
 } from "firebase/firestore";
-import firebaseApp from "./config";
+import { z } from "zod";
+import { db, auth } from "./config";
+import { writeFile } from "@/lib/fs/writer";
+import { useFsStore } from "@/stores/fsStore";
 import type { ProjectPlan } from "@/types";
 
-const db = getFirestore(firebaseApp);
-const COLLECTION = "projects";
-
-export async function saveProject(plan: ProjectPlan): Promise<void> {
-  await setDoc(doc(db, COLLECTION, plan.id), plan);
+// ---------------------------------------------------------------------------
+// Auth guard
+// ---------------------------------------------------------------------------
+function requireAuth(): string {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not authenticated");
+  return user.uid;
 }
 
-export async function getProject(id: string): Promise<ProjectPlan | null> {
-  const snap = await getDoc(doc(db, COLLECTION, id));
-  return snap.exists() ? (snap.data() as ProjectPlan) : null;
+// ---------------------------------------------------------------------------
+// Zod schema — validates Firestore data before use
+// ---------------------------------------------------------------------------
+const ProjectPlanSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  stack: z.object({ selected: z.array(z.string()) }),
+  features: z.array(
+    z.object({ id: z.string(), title: z.string(), description: z.string() }),
+  ),
+  pages: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      route: z.string(),
+      description: z.string(),
+    }),
+  ),
+  dataModels: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      fields: z.array(
+        z.object({
+          name: z.string(),
+          type: z.string(),
+          required: z.boolean(),
+        }),
+      ),
+    }),
+  ),
+  authStrategy: z.enum(["none", "nextauth", "clerk", "firebase", "custom"]),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
+// The collection path — user-scoped
+function projectsRef(uid: string) {
+  return collection(db, "users", uid, "projects");
 }
 
-export async function listProjects(): Promise<ProjectPlan[]> {
-  const q = query(collection(db, COLLECTION), orderBy("createdAt", "desc"));
+function projectDoc(uid: string, projectId: string) {
+  return doc(db, "users", uid, "projects", projectId);
+}
+
+// ---------------------------------------------------------------------------
+// CRUD helpers
+// ---------------------------------------------------------------------------
+
+export async function saveProject(
+  plan: ProjectPlan,
+  uid: string,
+): Promise<void> {
+  requireAuth(); // must be logged in before writing Firestore
+  const data = { ...plan, updatedAt: Date.now() };
+  await setDoc(projectDoc(uid, plan.id), data);
+
+  // Also persist jugaad.json to the local project folder (if open)
+  const projectHandle = useFsStore.getState().projectHandle;
+  if (projectHandle) {
+    await writeFile(
+      projectHandle,
+      "jugaad.json",
+      JSON.stringify(data, null, 2),
+    );
+  }
+}
+
+export async function getProject(
+  projectId: string,
+  uid: string,
+): Promise<ProjectPlan | null> {
+  const snap = await getDoc(projectDoc(uid, projectId));
+  if (!snap.exists()) return null;
+  const result = ProjectPlanSchema.safeParse(snap.data());
+  return result.success ? (result.data as ProjectPlan) : null;
+}
+
+export async function listProjects(uid: string): Promise<ProjectPlan[]> {
+  const q = query(projectsRef(uid), orderBy("updatedAt", "desc"), limit(50));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as ProjectPlan);
+  const plans: ProjectPlan[] = [];
+  for (const d of snap.docs) {
+    const result = ProjectPlanSchema.safeParse(d.data());
+    if (result.success) plans.push(result.data as ProjectPlan);
+    // silently skip invalid documents
+  }
+  return plans;
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  await deleteDoc(doc(db, COLLECTION, id));
+export async function deleteProject(
+  projectId: string,
+  uid: string,
+): Promise<void> {
+  requireAuth();
+  await deleteDoc(projectDoc(uid, projectId));
 }

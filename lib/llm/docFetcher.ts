@@ -63,3 +63,22 @@ export async function fetchDocChunk(
   docCache.set(cacheKey, truncated);
   return truncated;
 }
+
+/**
+ * Fetch docs for a set of stack IDs (from stackOptions).
+ * Returns a map of stackId → doc chunk string.
+ * Fetches concurrently; silently returns "" for any that fail.
+ */
+export async function fetchStackDocs(
+  stackIds: string[],
+): Promise<Record<string, string>> {
+  const { stackOptions } = await import("@/components/stack/stackRegistry");
+  const selected = stackOptions.filter((o) => stackIds.includes(o.id));
+  const entries = await Promise.all(
+    selected.map(async (opt) => {
+      const chunk = await fetchDocChunk(opt.docUrl);
+      return [opt.id, chunk] as const;
+    }),
+  );
+  return Object.fromEntries(entries);
+}

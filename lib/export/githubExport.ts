@@ -1,18 +1,21 @@
+// @octokit/rest MUST always be a dynamic import — never static
+
 type ExportParams = {
   projectHandle: FileSystemDirectoryHandle;
   repoName: string;
+  description: string;
   token: string;
-  org?: string;
   isPrivate: boolean;
 };
 
 async function collectFiles(
   handle: FileSystemDirectoryHandle,
-  path = "",
+  prefix = "",
 ): Promise<{ path: string; content: string }[]> {
   const files: { path: string; content: string }[] = [];
-  for await (const [name, entry] of handle.entries()) {
-    const entryPath = path ? `${path}/${name}` : name;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for await (const [name, entry] of (handle as any).entries()) {
+    const entryPath = prefix ? `${prefix}/${name}` : name;
     if (entry.kind === "directory") {
       const nested = await collectFiles(
         entry as FileSystemDirectoryHandle,
@@ -30,54 +33,50 @@ async function collectFiles(
 
 export async function exportToGitHub(
   params: ExportParams,
-): Promise<{ url: string }> {
+): Promise<{ repoUrl: string }> {
   const { Octokit } = await import("@octokit/rest");
   const octokit = new Octokit({ auth: params.token });
 
-  // 1. Create repo
-  const createParams = {
+  // Step 1: Create repo
+  const repoResponse = await octokit.rest.repos.createForAuthenticatedUser({
     name: params.repoName,
+    description: params.description,
     private: params.isPrivate,
     auto_init: false,
-  };
-  const repoResponse = params.org
-    ? await octokit.repos.createInOrg({ org: params.org, ...createParams })
-    : await octokit.repos.createForAuthenticatedUser(createParams);
+  });
 
   const owner = repoResponse.data.owner.login;
   const repo = repoResponse.data.name;
 
-  // 2. Collect all files
+  // Step 2: Collect all files
   const files = await collectFiles(params.projectHandle);
 
-  // 3. Create blobs
+  // Step 3: Create blobs
   const blobs = await Promise.all(
     files.map((f) =>
-      octokit.git.createBlob({
+      octokit.rest.git.createBlob({
         owner,
         repo,
-        content: Buffer.from(f.content).toString("base64"),
+        content: btoa(unescape(encodeURIComponent(f.content))),
         encoding: "base64",
       }),
     ),
   );
 
-  // 4. Build tree
-  const tree = files.map((f, i) => ({
-    path: f.path,
-    mode: "100644" as const,
-    type: "blob" as const,
-    sha: blobs[i].data.sha,
-  }));
-
-  const treeResponse = await octokit.git.createTree({
+  // Step 4: Create tree
+  const treeResponse = await octokit.rest.git.createTree({
     owner,
     repo,
-    tree,
+    tree: blobs.map((b, i) => ({
+      path: files[i].path,
+      mode: "100644" as const,
+      type: "blob" as const,
+      sha: b.data.sha,
+    })),
   });
 
-  // 5. Create commit
-  const commitResponse = await octokit.git.createCommit({
+  // Step 5: Create commit
+  const commitResponse = await octokit.rest.git.createCommit({
     owner,
     repo,
     message: "Initial commit from Jugaad",
@@ -85,13 +84,13 @@ export async function exportToGitHub(
     parents: [],
   });
 
-  // 6. Update ref
-  await octokit.git.createRef({
+  // Step 6: Create ref (main branch)
+  await octokit.rest.git.createRef({
     owner,
     repo,
     ref: "refs/heads/main",
     sha: commitResponse.data.sha,
   });
 
-  return { url: repoResponse.data.html_url };
+  return { repoUrl: `https://github.com/${owner}/${repo}` };
 }

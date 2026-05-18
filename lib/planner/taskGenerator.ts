@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { streamChat } from "@/lib/llm/client";
 import { buildTaskGeneratorPrompt } from "@/lib/llm/prompts";
-import { fetchDocChunk } from "@/lib/llm/docFetcher";
+import { fetchStackDocs } from "@/lib/llm/docFetcher";
 import { stackOptions } from "@/components/stack/stackRegistry";
 import type { LLMConfig, ProjectPlan, Task } from "@/types";
 
@@ -27,28 +27,53 @@ function extractTasks(response: string): Task[] {
   }
 }
 
+function getRelevantDocIds(filePath: string, allIds: string[]): string[] {
+  const fp = filePath.toLowerCase();
+
+  if (fp.includes("app/api/") || fp.includes("route")) {
+    return allIds.filter((id) =>
+      ["nextjs", "nextauth", "clerk", "prisma", "drizzle"].includes(id),
+    );
+  }
+  if (fp.endsWith(".prisma")) {
+    return allIds.filter((id) => id === "prisma");
+  }
+  if (fp.includes("components/")) {
+    return allIds.filter((id) => ["shadcn", "tailwind", "framer"].includes(id));
+  }
+  if (
+    fp === "package.json" ||
+    fp.includes("config") ||
+    fp.includes("tsconfig")
+  ) {
+    return allIds;
+  }
+  return allIds.filter((id) => id === "nextjs");
+}
+
 export async function generateTasks(
   plan: ProjectPlan,
   config: LLMConfig,
   onProgress: (status: string) => void,
 ): Promise<Task[]> {
+  // Step 1: Fetch docs
+  onProgress("Fetching documentation...");
+  const docCache = await fetchStackDocs(plan.stack.selected);
+
+  // Step 2: Build docsContext string for the generator prompt
   const selectedOptions = stackOptions.filter((o) =>
     plan.stack.selected.includes(o.id),
   );
-
-  const docChunks: Record<string, string> = {};
-  for (const option of selectedOptions) {
-    onProgress(`Fetching ${option.label} docs...`);
-    docChunks[option.id] = await fetchDocChunk(option.docUrl);
-  }
-
-  const docsContext = Object.entries(docChunks)
-    .map(([id, chunk]) => `### ${id}\n${chunk}`)
+  const docsContext = selectedOptions
+    .map((o) => `=== ${o.label} ===\n${docCache[o.id] ?? ""}`)
     .join("\n\n");
 
-  onProgress("Generating task list...");
-
+  // Step 3: Build prompt
+  onProgress("Building generation prompt...");
   const prompt = buildTaskGeneratorPrompt(plan, docsContext);
+
+  // Step 4: Call LLM (collect via streaming)
+  onProgress("Generating task list...");
   let fullResponse = "";
   await streamChat(
     [{ id: "gen", role: "user", content: prompt, timestamp: Date.now() }],
@@ -58,16 +83,27 @@ export async function generateTasks(
     },
   );
 
-  const tasks = extractTasks(fullResponse);
+  // Step 5: Parse + validate
+  const match = fullResponse.match(/<tasks>([\s\S]*?)<\/tasks>/);
+  if (!match) throw new Error("LLM did not return a <tasks> block");
 
-  // Assign relevant doc chunks per task based on filePath keywords
-  return tasks.map((task) => {
-    const relevantId = selectedOptions.find((o) =>
-      task.filePath.toLowerCase().includes(o.id.toLowerCase()),
-    )?.id;
-    return {
-      ...task,
-      docsContext: relevantId ? (docChunks[relevantId] ?? "") : "",
-    };
+  const parsed = JSON.parse(match[1].trim());
+  const tasks = z.array(TaskSchema).parse(parsed) as Task[];
+
+  // Step 6: Assign doc context slices per task
+  const allDocIds = plan.stack.selected;
+  const tasksWithDocs = tasks.map((task) => {
+    const relevantIds = getRelevantDocIds(task.filePath, allDocIds);
+    const relevantOptions = selectedOptions.filter((o) =>
+      relevantIds.includes(o.id),
+    );
+    const taskDocsContext = relevantOptions
+      .map((o) => `=== ${o.label} ===\n${docCache[o.id] ?? ""}`)
+      .join("\n\n");
+    return { ...task, docsContext: taskDocsContext };
   });
+
+  // Step 7: Return
+  onProgress("Task list ready.");
+  return tasksWithDocs;
 }

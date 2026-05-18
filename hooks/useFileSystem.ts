@@ -1,9 +1,5 @@
 import { useFsStore } from "@/stores/fsStore";
-import {
-  openBaseFolder,
-  reconnectBaseFolder,
-  createProjectFolder,
-} from "@/lib/fs/handle";
+import { openBaseFolder, createProjectFolder } from "@/lib/fs/handle";
 import { readFile, writeFile, deleteFile } from "@/lib/fs/writer";
 
 export function useFileSystem() {
@@ -13,10 +9,6 @@ export function useFileSystem() {
 
   async function pickBaseFolder() {
     return openBaseFolder();
-  }
-
-  async function reconnect() {
-    return reconnectBaseFolder();
   }
 
   async function createProject(name: string) {
@@ -45,7 +37,6 @@ export function useFileSystem() {
     baseFolderHandle,
     projectHandle,
     pickBaseFolder,
-    reconnect,
     createProject,
     read,
     write,

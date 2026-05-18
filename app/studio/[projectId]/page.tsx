@@ -21,11 +21,7 @@ export default function ProjectPage() {
       return;
     }
     try {
-      await executeAll(tasks.tasks, projectHandle, llmConfig, tasks);
-      if (!tasks.isExecuting) {
-        const hasError = tasks.tasks.some((t) => t.status === "error");
-        if (!hasError) toast.success("All tasks completed!");
-      }
+      await executeAll(tasks.tasks, projectHandle, llmConfig);
     } catch (err) {
       toast.error((err as Error).message);
     }

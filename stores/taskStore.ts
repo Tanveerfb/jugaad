@@ -15,6 +15,7 @@ type TaskStore = {
   clearStream: () => void;
   resetTasks: () => void;
   setIsExecuting: (v: boolean) => void;
+  incrementRetry: (id: string) => void;
 };
 
 export const useTaskStore = create<TaskStore>((set) => ({
@@ -47,4 +48,10 @@ export const useTaskStore = create<TaskStore>((set) => ({
       streamBuffer: "",
     }),
   setIsExecuting: (v) => set({ isExecuting: v }),
+  incrementRetry: (id) =>
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === id ? { ...t, retryCount: t.retryCount + 1 } : t,
+      ),
+    })),
 }));

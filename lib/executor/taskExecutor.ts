@@ -8,115 +8,111 @@
 import { streamChat } from "@/lib/llm/client";
 import { buildTaskExecutorPrompt, buildRetryPrompt } from "@/lib/llm/prompts";
 import { validateOutput } from "./validator";
-import { writeFile, readFile } from "@/lib/fs/writer";
+import { writeFile } from "@/lib/fs/writer";
+import { useTaskStore } from "@/stores/taskStore";
+import { toast } from "sonner";
 import type { LLMConfig, Task } from "@/types";
-import type { useTaskStore } from "@/stores/taskStore";
-
-type TaskStoreActions = ReturnType<typeof useTaskStore.getState>;
 
 export async function executeAll(
   tasks: Task[],
   projectHandle: FileSystemDirectoryHandle,
   config: LLMConfig,
-  store: TaskStoreActions,
 ): Promise<void> {
+  const store = useTaskStore.getState();
   store.setIsExecuting(true);
 
   for (const task of tasks) {
-    // 1. Verify dependencies are done
-    const deps = tasks.filter((t) => task.dependsOn.includes(t.id));
-    const unmet = deps.find((d) => d.status !== "done");
-    if (unmet) {
-      store.setTaskError(task.id, `Dependency "${unmet.title}" is not done.`);
-      store.updateTaskStatus(task.id, "error");
-      store.setIsExecuting(false);
-      return;
-    }
-
-    // 2. Mark as running
-    store.setActiveTask(task.id);
-    store.updateTaskStatus(task.id, "running");
-    store.clearStream();
-
-    // 3. Read dependency file contents
-    const depContents: Record<string, string> = {};
+    // 1. Pre-check: all declared dependencies must be "done" in the store
+    const storeTasks = useTaskStore.getState().tasks;
     for (const depId of task.dependsOn) {
-      const depTask = tasks.find((t) => t.id === depId);
-      if (depTask?.output) {
-        depContents[depTask.filePath] = depTask.output;
-      } else if (depTask) {
-        try {
-          depContents[depTask.filePath] = await readFile(
-            projectHandle,
-            depTask.filePath,
-          );
-        } catch {
-          // File might not exist yet — skip
-        }
+      const dep = storeTasks.find((t) => t.id === depId);
+      if (!dep || dep.status !== "done") {
+        const msg = `Dependency ${depId} not complete for task ${task.id}`;
+        useTaskStore.getState().setTaskError(task.id, msg);
+        useTaskStore.getState().updateTaskStatus(task.id, "error");
+        useTaskStore.getState().setIsExecuting(false);
+        toast.error(`Task failed: ${task.title} — dependency not complete`);
+        return;
       }
     }
 
-    let currentTask = { ...task };
+    // 2. Mark running
+    useTaskStore.getState().setActiveTask(task.id);
+    useTaskStore.getState().updateTaskStatus(task.id, "running");
+    useTaskStore.getState().clearStream();
+
+    // 3. Build dependency file contents from already-completed task outputs
+    const depContents: Record<string, string> = {};
+    for (const depId of task.dependsOn) {
+      const completedTask = useTaskStore
+        .getState()
+        .tasks.find((t) => t.id === depId);
+      if (completedTask?.output) {
+        depContents[completedTask.filePath] = completedTask.output;
+      }
+    }
+
+    let lastOutput = "";
+    let lastError = "";
     let succeeded = false;
 
-    while (currentTask.retryCount <= 3) {
-      // 4. Build prompt
+    // 4. Retry loop — max 3 attempts (attempts 0, 1, 2)
+    for (let attempt = 0; attempt < 3; attempt++) {
       const prompt =
-        currentTask.retryCount === 0
-          ? buildTaskExecutorPrompt(currentTask, depContents)
-          : buildRetryPrompt(currentTask.output ?? "", currentTask.error ?? "");
+        attempt === 0
+          ? buildTaskExecutorPrompt(task, depContents)
+          : buildRetryPrompt(lastOutput, lastError);
 
-      // 5. Stream response
       let fullOutput = "";
       await streamChat(
         [{ id: "exec", role: "user", content: prompt, timestamp: Date.now() }],
         config,
         (chunk) => {
           fullOutput += chunk;
-          store.appendToStream(chunk);
+          useTaskStore.getState().appendToStream(chunk);
         },
       );
 
-      // 6. Validate
-      const { valid, error } = validateOutput(currentTask.filePath, fullOutput);
+      const { valid, error } = validateOutput(task.filePath, fullOutput);
 
       if (valid) {
-        // 7a. Write file
-        await writeFile(projectHandle, currentTask.filePath, fullOutput);
-        store.setTaskOutput(currentTask.id, fullOutput);
-        store.updateTaskStatus(currentTask.id, "done");
+        await writeFile(projectHandle, task.filePath, fullOutput);
+        useTaskStore.getState().setTaskOutput(task.id, fullOutput);
+        useTaskStore.getState().updateTaskStatus(task.id, "done");
         succeeded = true;
         break;
       }
 
-      // 7b. Retry
-      if (currentTask.retryCount < 3) {
-        currentTask = {
-          ...currentTask,
-          retryCount: currentTask.retryCount + 1,
-          output: fullOutput,
-          error: error,
-        };
-        store.clearStream();
+      // Validation failed
+      lastOutput = fullOutput;
+      lastError = error ?? "Unknown validation error";
+
+      if (attempt < 2) {
+        useTaskStore.getState().incrementRetry(task.id);
+        useTaskStore.getState().clearStream();
       } else {
-        // 7c. Failure after 3 retries — pause
-        store.setTaskError(currentTask.id, error ?? "Unknown validation error");
-        store.updateTaskStatus(currentTask.id, "error");
-        store.clearStream();
-        store.setActiveTask(null);
-        store.setIsExecuting(false);
+        // All 3 attempts exhausted
+        useTaskStore.getState().setTaskError(task.id, lastError);
+        useTaskStore.getState().updateTaskStatus(task.id, "error");
+        useTaskStore.getState().clearStream();
+        useTaskStore.getState().setActiveTask(null);
+        useTaskStore.getState().setIsExecuting(false);
+        toast.error(
+          `Task failed: ${task.title} — fix required before continuing`,
+        );
         return;
       }
     }
 
     if (!succeeded) {
-      store.setIsExecuting(false);
+      useTaskStore.getState().setIsExecuting(false);
       return;
     }
 
-    store.clearStream();
-    store.setActiveTask(null);
+    useTaskStore.getState().clearStream();
+    useTaskStore.getState().setActiveTask(null);
   }
 
-  store.setIsExecuting(false);
+  useTaskStore.getState().setIsExecuting(false);
+  toast.success("Project built successfully!");
 }
