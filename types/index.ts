@@ -53,7 +53,7 @@ export type ProjectPlan = {
   updatedAt: number;
 };
 
-export type TaskStatus = "pending" | "running" | "done" | "error";
+export type TaskStatus = "pending" | "running" | "done" | "error" | "split";
 
 export type Task = {
   id: string;

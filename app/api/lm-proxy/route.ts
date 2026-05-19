@@ -1,5 +1,8 @@
 import { type NextRequest } from "next/server";
 
+/** Allow up to 5 minutes for long-running LLM streaming responses (e.g. task generation). */
+export const maxDuration = 300;
+
 /**
  * Server-side proxy for local LLM providers (Ollama, LM Studio).
  * Bypasses browser CORS restrictions by forwarding requests server-to-server.

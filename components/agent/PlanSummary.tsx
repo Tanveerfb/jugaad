@@ -2,13 +2,16 @@
 
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { Button } from "@/components/ui/button";
-import { Edit2, CheckCircle, RotateCcw } from "lucide-react";
+import { Edit2, CheckCircle, RotateCcw, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ProjectPlan } from "@/types";
 
 type PlanSummaryProps = {
   onEdit: () => void;
   onStartOver: () => void;
   onConfirm: () => void;
+  autoRun: boolean;
+  onToggleAutoRun: () => void;
 };
 
 function Section({
@@ -32,6 +35,8 @@ export default function PlanSummary({
   onEdit,
   onStartOver,
   onConfirm,
+  autoRun,
+  onToggleAutoRun,
 }: PlanSummaryProps) {
   const plan = useProjectPlanStore((s) => s.plan) as ProjectPlan;
 
@@ -109,11 +114,29 @@ export default function PlanSummary({
           <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
           Start Over
         </Button>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Edit2 className="h-3.5 w-3.5 mr-1.5" />
             Edit Plan
           </Button>
+          <button
+            type="button"
+            onClick={onToggleAutoRun}
+            title={
+              autoRun
+                ? "Autopilot on — build will start automatically"
+                : "Enable autopilot — build starts automatically after tasks generate"
+            }
+            className={cn(
+              "h-8 px-2.5 rounded-md text-xs font-medium flex items-center gap-1.5 border transition-colors",
+              autoRun
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+            )}
+          >
+            <Zap className={cn("h-3 w-3", autoRun && "fill-primary")} />
+            Autopilot
+          </button>
           <Button size="sm" onClick={onConfirm}>
             <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
             Confirm &amp; Generate Tasks

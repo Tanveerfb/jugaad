@@ -14,6 +14,13 @@ type ProjectPlanStore = {
   conversation: ConversationMessage[];
   isPlanning: boolean;
   isPlanConfirmed: boolean;
+  /** When true the project page will auto-start the build immediately after tasks load. */
+  autoRun: boolean;
+  /** Persisted so the progress card survives page reloads/Fast Refresh. */
+  isGenerating: boolean;
+  generatingStatus: string;
+  /** ms timestamp of when the current generation started; used to compute elapsed time after reloads. */
+  generatingStartTime: number | null;
   setPlan: (plan: ProjectPlan) => void;
   updatePlan: (partial: Partial<ProjectPlan>) => void;
   setPendingStack: (stack: StackConfig) => void;
@@ -21,6 +28,10 @@ type ProjectPlanStore = {
   confirmPlan: () => void;
   resetPlan: () => void;
   setIsPlanning: (v: boolean) => void;
+  setAutoRun: (v: boolean) => void;
+  startGenerating: () => void;
+  setGeneratingStatus: (s: string) => void;
+  stopGenerating: () => void;
 };
 
 export const useProjectPlanStore = create<ProjectPlanStore>()(
@@ -31,6 +42,10 @@ export const useProjectPlanStore = create<ProjectPlanStore>()(
       conversation: [],
       isPlanning: false,
       isPlanConfirmed: false,
+      autoRun: false,
+      isGenerating: false,
+      generatingStatus: "",
+      generatingStartTime: null,
       setPlan: (plan) => set({ plan, isPlanConfirmed: false }),
       updatePlan: (partial) =>
         set((state) =>
@@ -47,8 +62,26 @@ export const useProjectPlanStore = create<ProjectPlanStore>()(
           conversation: [],
           isPlanning: false,
           isPlanConfirmed: false,
+          autoRun: false,
+          isGenerating: false,
+          generatingStatus: "",
+          generatingStartTime: null,
         }),
       setIsPlanning: (v) => set({ isPlanning: v }),
+      setAutoRun: (v) => set({ autoRun: v }),
+      startGenerating: () =>
+        set({
+          isGenerating: true,
+          generatingStatus: "",
+          generatingStartTime: Date.now(),
+        }),
+      setGeneratingStatus: (s) => set({ generatingStatus: s }),
+      stopGenerating: () =>
+        set({
+          isGenerating: false,
+          generatingStatus: "",
+          generatingStartTime: null,
+        }),
     }),
     {
       name: "jugaad-plan",
@@ -57,6 +90,9 @@ export const useProjectPlanStore = create<ProjectPlanStore>()(
         isPlanConfirmed: s.isPlanConfirmed,
         pendingStack: s.pendingStack,
         conversation: s.conversation,
+        isGenerating: s.isGenerating,
+        generatingStatus: s.generatingStatus,
+        generatingStartTime: s.generatingStartTime,
       }),
     },
   ),

@@ -61,10 +61,10 @@ export default function StackSelector() {
         if (items.length === 0) return null;
         return (
           <div key={cat}>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
               {CATEGORY_LABELS[cat]}
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {items.map((option) => {
                 const isSelected = selected.includes(option.id);
                 const isLocked = LOCKED_IDS.includes(option.id);
@@ -75,17 +75,15 @@ export default function StackSelector() {
                     disabled={isLocked}
                     onClick={() => toggle(option.id)}
                     className={cn(
-                      "px-3 py-1.5 rounded-md text-sm font-medium border transition-colors",
+                      "px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors",
                       isSelected
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background text-foreground border-border hover:border-primary/50",
-                      isLocked && "opacity-60 cursor-not-allowed",
+                      isLocked && "opacity-50 cursor-not-allowed",
                     )}
                   >
                     {option.label}
-                    {isLocked && (
-                      <span className="ml-1 text-xs opacity-60">(locked)</span>
-                    )}
+                    {isLocked && <span className="ml-1 opacity-50">·</span>}
                   </button>
                 );
               })}

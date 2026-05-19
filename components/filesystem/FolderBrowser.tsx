@@ -5,6 +5,7 @@ import {
   Folder,
   FolderOpen,
   ChevronRight,
+  HardDrive,
   Home,
   X,
   Check,
@@ -153,6 +154,38 @@ export default function FolderBrowser({ onSelect, onClose }: Props) {
                     <ArrowLeft className="h-4 w-4 shrink-0" />
                     <span className="font-mono text-xs">..</span>
                   </button>
+                </li>
+              )}
+              {/* Drives switcher (Windows only) — shown whenever multiple drives exist */}
+              {result?.drives && result.drives.length > 1 && (
+                <li className="px-4 pt-3 pb-1">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <HardDrive className="h-3 w-3" />
+                    Drives
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {result.drives.map((drive) => {
+                      const isActive = result.path
+                        .toUpperCase()
+                        .startsWith(drive.slice(0, 2).toUpperCase());
+                      return (
+                        <button
+                          key={drive}
+                          type="button"
+                          onClick={() => browse(drive)}
+                          className={cn(
+                            "flex items-center gap-1 px-2 py-0.5 rounded border text-xs transition-colors",
+                            isActive
+                              ? "bg-primary/10 border-primary/40 text-foreground font-medium"
+                              : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                          )}
+                        >
+                          {drive.replace(/\\+$/, "")}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-border" />
                 </li>
               )}
               {result?.entries.length === 0 && (

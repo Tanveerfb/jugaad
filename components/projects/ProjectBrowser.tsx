@@ -2,16 +2,24 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Package, Clock, RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  Package,
+  Clock,
+  RefreshCw,
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import { useFsStore } from "@/stores/fsStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
+import { useTaskStore } from "@/stores/taskStore";
 import { rebuildFileTree } from "@/lib/fs/tree";
 import { cn } from "@/lib/utils";
-import type { ProjectPlan } from "@/types";
+import type { LocalProject } from "@/app/api/projects/list/route";
 import DeleteProjectDialog from "./DeleteProjectDialog";
 import RenameProjectDialog from "./RenameProjectDialog";
-import type { LocalProject } from "@/app/api/projects/list/route";
 
 function timeAgo(ts: number): string {
   const secs = Math.floor((Date.now() - ts) / 1000);
@@ -35,6 +43,10 @@ export default function ProjectBrowser({
   const setPlan = useProjectPlanStore((s) => s.setPlan);
   const router = useRouter();
 
+  const isExecuting = useTaskStore((s) => s.isExecuting);
+  const activePlanId = useTaskStore((s) => s.planId);
+  const syncPlanId = useTaskStore((s) => s.syncPlanId);
+
   const [projects, setProjects] = useState<LocalProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LocalProject | null>(null);
@@ -56,13 +68,24 @@ export default function ProjectBrowser({
     }
   }, [outputFolder]);
 
+  // Refresh when build starts or finishes (deferred to avoid set-state-in-effect)
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    const id = setTimeout(() => void loadProjects(), 150);
+    return () => clearTimeout(id);
+  }, [isExecuting, loadProjects]);
+
+  // Poll every 3 s while a build is running so the project appears
+  // as soon as jugaad.json lands on disk.
+  useEffect(() => {
+    if (!isExecuting) return;
+    const id = setInterval(loadProjects, 3000);
+    return () => clearInterval(id);
+  }, [isExecuting, loadProjects]);
 
   async function handleOpenProject(project: LocalProject) {
     setActiveProjectPath(project.path);
     setPlan(project.plan);
+    syncPlanId(project.plan.id);
     try {
       await rebuildFileTree(project.path);
     } catch {
@@ -175,14 +198,18 @@ export default function ProjectBrowser({
                       "bg-primary/10 hover:bg-primary/15",
                   )}
                 >
-                  {/* Status dot */}
-                  <div
-                    className={cn(
-                      "w-2 h-2 rounded-full shrink-0 mt-0.5",
-                      p.isBuilt ? "bg-green-500" : "bg-muted-foreground/40",
-                    )}
-                    title={p.isBuilt ? "Built" : "Not yet built"}
-                  />
+                  {/* Status dot / building spinner */}
+                  {isExecuting && activePlanId === p.plan.id ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary mt-0.5" />
+                  ) : (
+                    <div
+                      className={cn(
+                        "w-2 h-2 rounded-full shrink-0 mt-0.5",
+                        p.isBuilt ? "bg-green-500" : "bg-muted-foreground/40",
+                      )}
+                      title={p.isBuilt ? "Built" : "Not yet built"}
+                    />
+                  )}
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">

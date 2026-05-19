@@ -6,6 +6,7 @@ const STATUS_STYLES: Record<TaskStatus, string> = {
   running: "bg-blue-500/20 text-blue-400 animate-pulse",
   done: "bg-green-500/20 text-green-400",
   error: "bg-red-500/20 text-red-400",
+  split: "bg-purple-500/20 text-purple-400",
 };
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
@@ -13,6 +14,7 @@ const STATUS_LABELS: Record<TaskStatus, string> = {
   running: "Running",
   done: "Done",
   error: "Error",
+  split: "Split",
 };
 
 type StatusBadgeProps = {

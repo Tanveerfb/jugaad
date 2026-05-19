@@ -1,7 +1,10 @@
 const docCache = new Map<string, string>();
 
 const TIMEOUT_MS = 10_000;
+/** Full fetch used in the plan-chat context where more detail helps. */
 const MAX_CHARS = 8_000;
+/** Trimmed slice used in task-generation prompts to keep the context window sane. */
+export const TASK_GEN_MAX_CHARS = 2_500;
 const CONTEXT_LINES = 50;
 
 function stripHtml(raw: string): string {

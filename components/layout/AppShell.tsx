@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import BrandLogo from "@/components/shared/BrandLogo";
 import ProviderBadge from "@/components/shared/ProviderBadge";
 import ModelSwitcher from "@/components/shared/ModelSwitcher";
 import GitHubExportModal from "@/components/export/GitHubExportModal";
@@ -43,8 +42,12 @@ function TopBar() {
     <>
       <header className="flex items-center justify-between border-b border-border px-4 h-12 shrink-0">
         <div className="flex items-center gap-3">
-          <BrandLogo variant="icon" />
-          <span className="text-sm font-semibold">{appConfig.name}</span>
+          <Link
+            href="/studio"
+            className="font-brand text-sm font-semibold tracking-wide underline-offset-2 decoration-1 hover:underline transition-all"
+          >
+            {appConfig.name}
+          </Link>
           {plan && (
             <>
               <span className="text-muted-foreground">/</span>
@@ -191,9 +194,9 @@ function UserAvatar({
 }
 
 type AppShellProps = {
-  sidebar: React.ReactNode;
+  sidebar?: React.ReactNode;
   center: React.ReactNode;
-  right: React.ReactNode;
+  right?: React.ReactNode;
 };
 
 export default function AppShell({ sidebar, center, right }: AppShellProps) {
@@ -202,9 +205,11 @@ export default function AppShell({ sidebar, center, right }: AppShellProps) {
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar — 240px */}
-        <aside className="w-60 shrink-0 border-r border-border flex flex-col overflow-hidden">
-          {sidebar}
-        </aside>
+        {sidebar && (
+          <aside className="w-60 shrink-0 border-r border-border flex flex-col overflow-hidden">
+            {sidebar}
+          </aside>
+        )}
 
         {/* Center panel — flex-1 */}
         <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -212,9 +217,11 @@ export default function AppShell({ sidebar, center, right }: AppShellProps) {
         </main>
 
         {/* Right panel — 420px */}
-        <aside className="w-105 shrink-0 border-l border-border flex flex-col overflow-hidden">
-          {right}
-        </aside>
+        {right && (
+          <aside className="w-105 shrink-0 border-l border-border flex flex-col overflow-hidden">
+            {right}
+          </aside>
+        )}
       </div>
     </div>
   );

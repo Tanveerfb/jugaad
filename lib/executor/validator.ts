@@ -50,11 +50,17 @@ export function validateOutput(
       return { valid: false, error: "Output starts with a markdown fence." };
     }
 
-    const hasExport = /\bexport\b/.test(content);
+    // Require an actual TypeScript export declaration — not just the word
+    // "export" appearing anywhere in comments or text.
+    const hasExport =
+      /\bexport\s+(default\b|type\b|interface\b|function\b|const\b|let\b|var\b|class\b|enum\b|abstract\b|async\b|\{)/.test(
+        content,
+      );
     if (!hasExport) {
       return {
         valid: false,
-        error: "TypeScript file has no export statement.",
+        error:
+          "TypeScript file has no export declaration (export function / export const / export default / etc.).",
       };
     }
 
@@ -92,20 +98,52 @@ export function validateOutput(
       };
     }
 
-    // "use client" check — any file using React hooks must have the directive
+    // "use client" check — any file using React hooks must have the directive.
+    // Exception: pure .ts files that are not custom hooks (hooks/use*.ts) are
+    // utility/store files — they should NOT use React hooks at all.
     if (!isRouteFile) {
       const hasHooks =
         /\buse(State|Effect|Ref|Callback|Memo|Context|Reducer|Id|Pathname|Router|SearchParams|Params)\s*[(<(]/.test(
           content,
         );
       const hasUseClient = /^\s*['"]use client['"]\s*;?\r?\n/.test(content);
+      const isReactComponentFile =
+        ext === "tsx" ||
+        filePath.includes("components/") ||
+        filePath.includes("app/") ||
+        /\/hooks\/use[A-Z]/.test(filePath);
+
       if (hasHooks && !hasUseClient) {
-        return {
-          valid: false,
-          error:
-            "\"use client\" directive is missing. This file uses React hooks (useState/useEffect/etc.) and must have 'use client' as its absolute first line.",
-        };
+        if (isReactComponentFile) {
+          return {
+            valid: false,
+            error:
+              "\"use client\" directive is missing. This file uses React hooks (useState/useEffect/etc.) and must have 'use client' as its absolute first line.",
+          };
+        } else {
+          // .ts utility / store / lib file — hooks are forbidden here
+          return {
+            valid: false,
+            error:
+              "React hooks (useState/useEffect/etc.) must not be used in utility or store .ts files. " +
+              "Rewrite this file as pure TypeScript functions with no React dependencies.",
+          };
+        }
       }
+    }
+
+    // In Next.js 16, "middleware.ts" is renamed to "proxy.ts". Flag the wrong filename.
+    if (
+      filePath === "middleware.ts" ||
+      filePath === "middleware.js" ||
+      filePath.endsWith("/middleware.ts") ||
+      filePath.endsWith("/middleware.js")
+    ) {
+      return {
+        valid: false,
+        error:
+          'In Next.js 16, Middleware is renamed to Proxy. Use "proxy.ts" instead of "middleware.ts". Export a named function "proxy" (not "middleware"). Runtime must be "nodejs" (edge not supported).',
+      };
     }
 
     // next/router is deprecated — must use next/navigation
@@ -114,6 +152,38 @@ export function validateOutput(
         valid: false,
         error:
           'Do not import from "next/router". Use "next/navigation" instead (useRouter, usePathname, redirect, useParams, useSearchParams).',
+      };
+    }
+
+    // Relative imports are forbidden — all local imports must use "@/"
+    // Matches: from "./foo", from "../foo", from "./foo/bar", from "../../foo"
+    if (/from\s+['"]\.\.?\//.test(content)) {
+      return {
+        valid: false,
+        error:
+          'Relative import path detected (e.g. from "./X" or from "../X"). Use the "@/" alias for all local imports.',
+      };
+    }
+
+    // Template artifact leaked into output — LLM left an unfilled placeholder tag
+    if (/<unused\d+>/.test(content)) {
+      return {
+        valid: false,
+        error:
+          "Output contains template artifact '<unusedN>'. Remove it completely — do not include unfilled placeholder tags.",
+      };
+    }
+
+    // TypeScript type union used as a runtime value, e.g.:
+    //   castlingRights: 'wK' | 'wQ'   ← in an object literal value position
+    // This evaluates to 0 at runtime (bitwise OR on strings → NaN | NaN = 0).
+    // Detect the pattern: colon, optional space, quoted string, pipe, quoted string
+    if (/:\s*'[^']+'\s*\|/.test(content) || /:\s*"[^"]+"\s*\|/.test(content)) {
+      return {
+        valid: false,
+        error:
+          "TypeScript type union syntax used as a runtime value (e.g. `key: 'a' | 'b'`). " +
+          "Assign a single concrete string value instead. Type annotations belong in `type`/`interface` declarations, not object literal values.",
       };
     }
 

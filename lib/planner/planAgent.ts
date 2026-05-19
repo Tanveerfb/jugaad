@@ -48,11 +48,18 @@ function extractPlan(response: string): ProjectPlan | null {
   try {
     const parsed = JSON.parse(match[1].trim());
     const result = ProjectPlanSchema.safeParse(parsed);
-    return result.success ? (result.data as ProjectPlan) : null;
+    if (!result.success) return null;
+    // The LLM has no real-time clock — always stamp with the actual current time.
+    const now = Date.now();
+    return { ...(result.data as ProjectPlan), createdAt: now, updatedAt: now };
   } catch {
     return null;
   }
 }
+
+/** Cap planning chat responses — prevents thinking-heavy models from
+ *  generating unbounded tokens and aborting the stream mid-plan. */
+const PLAN_MAX_TOKENS = 16_384;
 
 export async function sendMessage(
   userMessage: string,
@@ -79,7 +86,7 @@ export async function sendMessage(
     },
   ];
 
-  const response = await streamChat(messages, config, onChunk);
+  const response = await streamChat(messages, config, onChunk, PLAN_MAX_TOKENS);
   const extractedPlan = extractPlan(response);
   return { response, extractedPlan };
 }

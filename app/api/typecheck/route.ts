@@ -109,6 +109,67 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json<TypecheckResult>({ errors: [], raw: "" });
   }
 
+  // Project-wide mode: filePath === "**" runs `tsc --noEmit` against the project's
+  // tsconfig.json, resolving all imports. This catches cross-file type mismatches
+  // (e.g. wrong string literal values, missing exports, incompatible prop types).
+  if (filePath === "**") {
+    const tsconfigPath = path.join(projectPath, "tsconfig.json");
+    if (!existsSync(tsconfigPath)) {
+      return NextResponse.json<TypecheckResult>({
+        errors: [],
+        raw: "No tsconfig.json found",
+      });
+    }
+    try {
+      const { stderr } = await execAsync(`npx tsc --noEmit --pretty false`, {
+        cwd: projectPath,
+        timeout: 60_000,
+      });
+      // Project-wide: return all errors, not filtered to a single file
+      const allErrors: TypecheckError[] = [];
+      for (const line of stderr.split("\n")) {
+        const match = line.match(
+          /^(.+?)\((\d+),(\d+)\):\s+(?:error|warning)\s+TS\d+:\s+(.+)$/,
+        );
+        if (!match) continue;
+        const [, filePart, lineNum, colNum, message] = match;
+        allErrors.push({
+          file: filePart.trim().replace(/\\/g, "/"),
+          line: parseInt(lineNum, 10),
+          col: parseInt(colNum, 10),
+          message: message.trim(),
+        });
+      }
+      return NextResponse.json<TypecheckResult>({
+        errors: allErrors,
+        raw: stderr,
+      });
+    } catch (err) {
+      const output =
+        err instanceof Error
+          ? err.message
+          : `${(err as { stdout?: string }).stdout ?? ""}${(err as { stderr?: string }).stderr ?? ""}`;
+      const allErrors: TypecheckError[] = [];
+      for (const line of output.split("\n")) {
+        const match = line.match(
+          /^(.+?)\((\d+),(\d+)\):\s+(?:error|warning)\s+TS\d+:\s+(.+)$/,
+        );
+        if (!match) continue;
+        const [, filePart, lineNum, colNum, message] = match;
+        allErrors.push({
+          file: filePart.trim().replace(/\\/g, "/"),
+          line: parseInt(lineNum, 10),
+          col: parseInt(colNum, 10),
+          message: message.trim(),
+        });
+      }
+      return NextResponse.json<TypecheckResult>({
+        errors: allErrors,
+        raw: output,
+      });
+    }
+  }
+
   // Isolated check: --noResolve skips module resolution so we can check partial projects.
   // --strict + noUnusedLocals catches the most common quality issues.
   const cmd = [

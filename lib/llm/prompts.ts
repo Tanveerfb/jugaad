@@ -14,15 +14,18 @@ export function buildPlanAgentSystemPrompt(stack: StackConfig): string {
 
   return `You are an expert web application planning assistant for a local-first AI scaffolding studio called Jugaad.
 
-Your role is to help the user plan their Next.js web application through a conversational flow.
+Your role is to help the user plan their Next.js web application and produce a structured JSON plan.
 
 Selected tech stack:
 ${stackList}
 
-Guidelines:
-- Ask clarifying questions to understand the app's purpose, features, pages, and data models.
-- Keep questions focused and conversational — one topic at a time.
-- When you have enough information to produce a complete plan, output it wrapped in <plan> tags as valid JSON matching this TypeScript type:
+CRITICAL RULES — follow these exactly:
+1. If the user's message already describes features, pages, and data well enough, OUTPUT THE PLAN IMMEDIATELY. Do NOT ask questions.
+2. If the description is genuinely incomplete, ask AT MOST ONE message with ALL your questions bundled together. Then wait for the answer and OUTPUT THE PLAN — do not ask more questions after that.
+3. NEVER ask more than one round of clarifying questions total.
+4. When the user says "generate the plan", "stop asking", or gives answers to your questions — OUTPUT THE PLAN NOW, unconditionally.
+
+When outputting the plan, wrap it in <plan> tags as valid JSON matching this TypeScript type exactly:
 
 type ProjectPlan = {
   id: string;           // generate a UUID v4
@@ -37,12 +40,12 @@ type ProjectPlan = {
   updatedAt: number;    // Date.now()
 };
 
-Example output when ready:
+Output format:
 <plan>
 { "id": "...", "name": "...", ... }
 </plan>
 
-Do not produce the plan until you have gathered sufficient detail about features, pages, and data models.`;
+Output ONLY the <plan> block when ready — no preamble, no commentary after it.`;
 }
 
 export function buildTaskGeneratorPrompt(
@@ -63,22 +66,51 @@ Rules:
 3. File paths use Next.js App Router convention (e.g. "app/dashboard/page.tsx"). No src/ prefix.
 4. Every page.tsx and layout.tsx must have a default export.
 5. Every route.ts must export at least one of GET/POST/PUT/DELETE.
-6. First tasks must always be: package.json → tsconfig.json → postcss.config.mjs → next.config.ts → app/globals.css → types → utils → components → pages.
+6. The project is always initialized with \`npx create-next-app@latest\` before your generated files are written. Therefore, do NOT generate tsconfig.json or postcss.config.mjs — they are pre-configured correctly. Start tasks in this order: package.json (with all stack-specific deps) → next.config.ts (only if stack needs custom config) → app/globals.css → types → utils → components → pages.
 7. Include ALL necessary files: config, types, utils, stores, components, and pages. Do not omit any file the app needs to run.
-8. PACKAGE VERSIONS: Use exact versions below. Never guess or use older versions.
+20. FILE SIZE LIMIT — CRITICAL: Every generated file must be ≤120 lines. This is non-negotiable because each file is written by an LLM with a limited context window.
+    - If a module (utility, store, component) would exceed ~120 lines, SPLIT it into multiple focused files. Add a barrel index.ts/index.tsx that re-exports everything.
+    - Examples of good splits:
+      • utils/validation/email.ts + utils/validation/password.ts + utils/validation/index.ts
+      • utils/chess/pawn.ts + utils/chess/sliding-pieces.ts + utils/chess/king-knight.ts + utils/chess/index.ts
+      • components/form/FormField.tsx + components/form/FormActions.tsx + components/form/index.ts
+    - Components: split by logical section (header, body, footer) or by sub-component.
+    - Stores: split by domain (auth-store.ts, ui-store.ts) — never one giant store file.
+    - Utility files with 4+ related functions: split by function group, each file exports 2-4 focused functions.
+    Think about the split BEFORE planning tasks. Prefer more smaller tasks over fewer large ones.
+8. PACKAGE VERSIONS AND BREAKING API CHANGES — task instructions MUST reflect these exact APIs:
    Core: next@${LATEST_VERSIONS["next"]}, react@${LATEST_VERSIONS["react"]}, react-dom@${LATEST_VERSIONS["react-dom"]}, typescript@${LATEST_VERSIONS["typescript"]}
    Tailwind v4: tailwindcss@${LATEST_VERSIONS["tailwindcss"]} (devDep), @tailwindcss/postcss@${LATEST_VERSIONS["@tailwindcss/postcss"]} (devDep). No autoprefixer. No old tailwindcss PostCSS plugin.
    State: zustand@${LATEST_VERSIONS["zustand"]}, zod@${LATEST_VERSIONS["zod"]}, react-hook-form@${LATEST_VERSIONS["react-hook-form"]}
+   BREAKING CHANGES TO CALL OUT IN TASK INSTRUCTIONS:
+   • Zustand v5: \`create<State>()(set => ...)\` (double-call curried form). No \`combine\` middleware. Persist: wrap with \`persist(creator, { name: "key" })\`. NEVER use \`StateCreator\` as the exported store type — always use \`create()\` and export the hook.
+   • Zod v4: \`ZodError.issues\` (not \`.errors\`). New standalone validators: \`z.email()\`, \`z.url()\`. \`z.pipe()\` for chaining transforms.
+   • React 19: \`useActionState\` replaces \`useFormState\`. \`use()\` hook for async resources. ref is a prop (no forwardRef). \`useOptimistic\` for optimistic UI.
+   • Firebase v12: modular SDK only — \`import { getAuth } from "firebase/auth"\`. Never \`firebase/compat\`.
+21. TYPE LITERAL VERBATIM — CRITICAL: When a type definition uses exact string literal unions (e.g. \`type Color = 'white' | 'black'\`, \`type Status = 'ongoing' | 'checkmate'\`), ALL implementation files that produce or consume those values MUST use the exact strings verbatim — never abbreviate or shorten them (never \`'w'\`, \`'b'\`, never \`'W'\`, \`'B'\`). Task instructions for type-consuming files MUST call out the exact values. Example: "Color is \`'white'\` or \`'black'\` — never \`'w'\` or \`'b'\`".
+   Additionally: type union syntax (e.g. \`'a' | 'b' | 'c'\`) is valid ONLY inside \`type\`, \`interface\`, or function parameter declarations. In an object literal value position (e.g. \`{ key: 'a' | 'b' }\`) it is a runtime bitwise OR that evaluates to \`0\` — always assign a single concrete string value there.
 9. TAILWIND v4: Do NOT generate tailwind.config.ts / tailwind.config.js. Tailwind v4 is CSS-first. postcss.config must use "@tailwindcss/postcss" only. globals.css must start with '@import "tailwindcss";' — no @tailwind directives.
+   TAILWIND v4 DYNAMIC CLASSES — CRITICAL: The scanner does NOT process Tailwind class names interpolated inside template literals. Task instructions must specify that components use plain ternaries or pre-computed variables for conditional classes — never \`\${condition ? "bg-X" : "bg-Y"}\` inside a template literal. For runtime-dynamic values, use inline style={{ ... }} instead.
+   LAYOUT RELIABILITY: For fixed-grid UIs (game boards, calendars, data grids), use CSS Grid with explicit row/column counts. To make a grid container perfectly square, use the padding-bottom trick: set the outer wrapper to position:relative + paddingBottom:"100%", and make the inner grid div position:absolute with inset:0. This ensures CSS Grid \`1fr\` rows resolve against a definite height. Do NOT rely on Tailwind's aspect-square class alone — CSS Grid fr-unit rows cannot resolve their height against an aspect-ratio-derived container height. Example: <div style={{position:"relative",width:"100%",paddingBottom:"100%"}}><div style={{position:"absolute",inset:0,display:"grid",gridTemplateColumns:"repeat(8,1fr)",gridTemplateRows:"repeat(8,1fr)"}}>...</div></div>
 10. "use client": Any file using React hooks, event handlers, or browser APIs must have "use client" as its absolute first line (before all imports). Server Components (data fetching, static) must NOT have it. Route handlers (route.ts) must NOT have it.
+   CRITICAL: Files in utils/, lib/, or stores/ are pure TypeScript modules — they must NEVER use React hooks (useState, useEffect, useRef, useCallback, useContext, etc.). Write them as plain exported functions/constants with no React imports whatsoever. Only components (components/, app/) and custom hooks (hooks/) may use React hooks.
 11. next.config.ts: Keep MINIMAL. Do NOT set typescript.ignoreBuildErrors or eslint.ignoreDuringBuilds — the app must produce zero errors and zero warnings. Only add config the app specifically needs.
-12. tsconfig.json: Must use "strict": true, "noUnusedLocals": true, "noUnusedParameters": true, "noImplicitReturns": true, "noFallthroughCasesInSwitch": true. Must include paths: { "@/*": ["./*"] }, "jsx": "preserve", "moduleResolution": "bundler".
+12. tsconfig.json: Must use "strict": true, "noUnusedLocals": true, "noUnusedParameters": true, "noImplicitReturns": true, "noFallthroughCasesInSwitch": true. Must include "baseUrl": ".", "paths": { "@/*": ["./*"] }, "jsx": "preserve", "moduleResolution": "bundler".
 13. IMPORT ALIAS: All generated files use "@/" for local imports. Never relative paths ("../X", "./X").
 14. NEVER import from "next/router" — use "next/navigation" (useRouter, usePathname, redirect, useParams, useSearchParams).
 15. Every component or page doing async work must handle loading AND error states. No indeterminate UI states.
 16. Design quality: Clean, minimal, polished UI. Real content — no lorem ipsum. Consistent Tailwind spacing (4-unit scale). Semantic HTML. Responsive 320px→1440px. Accessible: labels, aria attributes, keyboard navigation.
 17. Prefer React Server Components for data fetching. Only use "use client" when genuine interactivity is required.
 18. Task instructions must be specific: describe what the file exports, what props/types it uses, how it connects to other files, and any key implementation details.
+19. AUTH PAGES (MANDATORY): If authStrategy is not "none", you MUST generate ALL of the following — never omit them:
+    - app/login/page.tsx — a login form page with email + password fields (and OAuth buttons if applicable)
+    - app/signup/page.tsx — a registration form page for email/password auth
+    - proxy.ts at the project root — protect authenticated routes, redirect unauthenticated users to /login. IMPORTANT: In Next.js 16, Middleware is renamed to Proxy. Use the filename "proxy.ts" (NOT "middleware.ts"). Export a named function called "proxy" (NOT "middleware"). The runtime must be "nodejs" (edge runtime is NOT supported). Example: \`export function proxy(request: NextRequest) { ... }\` with \`export const config = { matcher: [...] }\`.
+    - The auth config/helper in lib/ (e.g. lib/auth.ts for NextAuth, lib/firebase/client.ts for Firebase Auth)
+    - For NextAuth: app/api/auth/[...nextauth]/route.ts exporting GET and POST handlers
+    - For Clerk: wrap root app/layout.tsx with <ClerkProvider>; add app/sign-in/[[...sign-in]]/page.tsx and app/sign-up/[[...sign-up]]/page.tsx
+    - For Firebase Auth: an AuthProvider React context component that wraps the layout
+    The user explicitly chose authentication — missing auth pages make the app non-functional.
 
 Output the tasks as a JSON array wrapped in <tasks> tags. No other text outside the tags.
 
@@ -147,52 +179,87 @@ export function buildTaskExecutorPrompt(
 - "noFallthroughCasesInSwitch": true — switch cases must break or return.
 - paths: { "@/*": ["./*"] } — required for the @/ import alias to resolve.
 - "jsx": "preserve", "moduleResolution": "bundler" — required for Next.js App Router.\n`;
+  } else if (/^(utils|lib|stores)\//.test(task.filePath)) {
+    fileSpecificRules = `\n⚠ PURE TYPESCRIPT FILE — CRITICAL CONSTRAINTS:
+This file lives in ${task.filePath.split("/")[0]}/ and is a plain TypeScript module.
+DO NOT USE React hooks. Not useState, useEffect, useRef, useCallback, useMemo, useContext, useReducer, or ANY other hook.
+DO NOT add "use client" or "use server" at the top.
+DO NOT import from "react" at all (unless importing only types like React.FC — but prefer not to).
+Write ONLY plain exported TypeScript functions, types, constants, and classes.
+No JSX, no React components, no browser-only APIs (window, document, navigator, localStorage).
+Pure functions are strongly preferred — avoid side effects.\n`;
   }
 
+  const isUIFile = /^(app|components|pages)\//.test(task.filePath);
+
   const qualityRules = `
-You are a principal-level TypeScript/React engineer. Write production-grade, idiomatic code at the same quality bar as the Next.js core team. No shortcuts. No suppression comments. No placeholder code.
+You are a principal-level TypeScript/React engineer. Write clean, production-quality code. No shortcuts, no placeholder code, no suppression comments.
 
-TYPESCRIPT STRICT COMPLIANCE (strict: true, noUnusedLocals: true, noUnusedParameters: true, noImplicitReturns: true are all enabled):
-• Never use \`any\` — use \`unknown\` and narrow it, or use specific types. If a library forces \`any\`, cast through \`unknown\` with a comment.
-• Explicitly type all function parameters. Declare non-obvious return types.
-• Never use non-null assertion (!). Use optional chaining (?.) or explicit null checks.
-• Never use type assertion (as T) unless you can prove it correct. Prefer type guards.
-• Import ONLY identifiers you use in the file body. Unused imports are compile errors.
-• Unused required parameters: prefix with _ (e.g. _event: React.MouseEvent).
-• All code paths in non-void functions must return a value.
-• Never add // @ts-ignore or // @ts-expect-error — fix the type error properly.
-• Never add // eslint-disable comments — write code that passes ESLint without suppression.
+STRICT MODE (strict: true, noUnusedLocals, noUnusedParameters, noImplicitReturns all enabled):
+• No \`any\` — use specific types or \`unknown\` + narrowing.
+• No non-null assertion (!). Use ?. or explicit null checks.
+• No unused imports — every import must be used in the file body.
+• Prefix unused-but-required parameters with _ (e.g. _event).
+• All non-void code paths must return a value.
+• No @ts-ignore, @ts-expect-error, or eslint-disable comments.
+• TYPE FLEXIBILITY: If the instruction describes a type that conflicts with the provided dependency file types, use your judgment. Prefer the approach that is most type-safe and compatible with existing files. Instruction type descriptions are guides, not rigid contracts.
+• TYPE LITERAL VERBATIM: When dependency files define a string literal union type (e.g. \`type Color = 'white' | 'black'\`), use those EXACT strings as runtime values everywhere — never abbreviate ('w', 'b'). Check the dependency file contents above before writing any literal string values for typed fields.
+• TYPE UNION AS VALUE: Never write \`someKey: 'a' | 'b'\` inside an object literal — that is runtime bitwise OR (evaluates to 0). Type union syntax is only valid in \`type\`/\`interface\`/parameter declarations.
 
-"USE CLIENT" DIRECTIVE:
-• REQUIRED on any file using: useState, useEffect, useRef, useCallback, useMemo, useContext, useReducer, useId, usePathname, useRouter, useSearchParams, useParams, or any browser API (window, document, localStorage, sessionStorage, navigator).
-• Must be the ABSOLUTE FIRST LINE — before all import statements.
-• Must NOT appear in route.ts/route.tsx files (always server-side).
-• Must NOT appear in pure Server Components (no hooks, no browser APIs).
+"USE CLIENT": First line (before imports) only when the file uses React hooks or browser APIs. Never in utils/, lib/, stores/, or route.ts.
 
-IMPORTS:
-• "@/" alias for ALL local imports ("@/components/X", "@/lib/utils"). Never relative paths ("./X", "../X").
-• Import from "next/navigation" (useRouter, usePathname, redirect, useParams, useSearchParams). NEVER "next/router".
-• Order: (1) React/Next.js, (2) third-party packages, (3) "@/" local. Blank line between groups.
+IMPORTS: "@/" for all local imports. "next/navigation" not "next/router". Order: React/Next → third-party → "@/" local.
 
-CODE COMPLETENESS:
-• Complete implementation only. No "// TODO", "// ...", "// implement this", "// add your logic here", "// rest of code".
-• Every async operation: explicit try/catch.
-• List renders: unique, stable key props. Never use array index as key on dynamic/reorderable lists.
+CODE COMPLETENESS: Full implementation only. No TODO/placeholder comments. Every async op has try/catch. Keep files under ~120 lines.
+${
+  isUIFile
+    ? `
+UI QUALITY:
+• Semantic HTML. Never <div onClick> — use <button type="button">. Form inputs need <label>.
+• Responsive 320px–1440px. One <h1> per page. Show loading + error states. Unique stable keys on lists.
+• Tailwind 4-unit spacing. Semantic color variables (background, foreground, muted, border, primary). Dark-mode safe.
+• TAILWIND v4 DYNAMIC CLASSES — CRITICAL: Tailwind v4's scanner does NOT process class names interpolated inside template literals. Never do this:
+    ❌ className={\`\${isActive ? "bg-blue-500" : "bg-gray-200"} p-4\`}
+    ❌ className={\`bg-\${color}-500\`}
+  Instead use a plain ternary or pre-computed variable (both are scanned):
+    ✅ className={isActive ? "bg-blue-500 p-4" : "bg-gray-200 p-4"}
+    ✅ const cls = isActive ? "bg-blue-500" : "bg-gray-200"; className={cn(cls, "p-4")}
+  For runtime-dynamic values (unknown at scan time), use inline style:
+    ✅ style={{ backgroundColor: dynamicColor }}
+• LAYOUT RELIABILITY: For fixed-grid UIs (game boards, calendars, data grids), prefer CSS Grid with explicit row/column counts over nested flex. To make a grid container perfectly square, use the padding-bottom trick instead of the CSS aspect-ratio property: outer wrapper = position:relative + paddingBottom:"100%"; inner grid = position:absolute + inset:0 + display:grid. CSS Grid \`1fr\` rows cannot resolve their height against an aspect-ratio-derived parent height, so \`aspect-square\` + \`gridTemplateRows:repeat(N,1fr)\` will collapse rows to their minimum content size.
+`
+    : ""
+}`;
 
-UI/UX QUALITY:
-• Semantic HTML: <header>, <main>, <nav>, <section>, <article>, <footer>, <button>, <form>, <label>. Never <div onClick>.
-• <button type="button"> for non-submit buttons. <button type="submit"> only inside forms.
-• Every form input needs an associated <label> (htmlFor + id, or aria-labelledby).
-• Images: descriptive alt text, or alt="" for decorative images.
-• Loading states: show a spinner or skeleton. Error states: clear message with retry option.
-• One <h1> per page. Logical heading hierarchy (h1 → h2 → h3). Minimum text-sm (14px) for body text.
-• Responsive: works from 320px to 1440px. Use Tailwind sm:/md:/lg: breakpoints.
-• Spacing: Tailwind 4-unit scale (p-4, gap-4, my-8). Adequate whitespace. No cramped layouts.
-• Colors: use semantic Tailwind CSS variables (background, foreground, muted, border, primary). Dark-mode compatible.
-`;
+  // Version-API context injected for all code files so the LLM uses the
+  // correct API for the EXACT package versions that are installed.
+  // Omit for package.json/CSS/config files which already have their own rules.
+  const isCodeFile = !task.filePath.match(
+    /\.(json|css|mjs|postcss)$|^(postcss|tailwind)\.config\./,
+  );
+  // Only include package version context when the file is likely to use external
+  // packages. Pure TypeScript utilities in lib/ (e.g. chess logic, validators)
+  // almost never import framework packages, so skipping the context avoids adding
+  // 500+ irrelevant tokens that slow thinking-mode models down.
+  const isPureLibUtil = /^lib\/.*\.ts$/.test(task.filePath);
+  const versionContext =
+    isCodeFile && !isPureLibUtil
+      ? `\nINSTALLED PACKAGE VERSIONS — use the API that matches these exact versions:
+• next@${LATEST_VERSIONS["next"]} — App Router only. Layouts in app/. Server Components by default. Use next/navigation (not next/router). use server / use client directives. Server Actions with \`"use server"\`.
+• react@${LATEST_VERSIONS["react"]} — React 19. Use \`useActionState\` (replaces \`useFormState\`). \`use()\` hook for promises/context. \`useOptimistic\`. \`useTransition\` for async UI. ref is now a prop (no forwardRef needed).
+• zustand@${LATEST_VERSIONS["zustand"]} — Zustand v5 BREAKING: \`create<State>()(set => ...)\` (double-call). No \`combine\` middleware. No \`devtools\` import from "zustand/middleware" for basic stores. \`useStore(store, selector)\` for external stores. Slices pattern: each slice is a \`StateCreator\`.
+• zod@${LATEST_VERSIONS["zod"]} — Zod v4 BREAKING: \`z.object\`, \`z.string\`, \`z.number\` etc. unchanged. \`z.infer<typeof Schema>\` unchanged. New: \`z.email()\`, \`z.url()\`, \`z.uuid()\` as standalone validators. \`z.pipe()\` for chaining. \`ZodError.issues\` (not \`.errors\`).
+• tailwindcss@${LATEST_VERSIONS["tailwindcss"]} — Tailwind v4. CSS-first. No tailwind.config.ts. Use @theme blocks in CSS. Arbitrary values still work. New: 3d utilities, \`not-*\` variants, \`field-sizing-content\`.
+• framer-motion@${LATEST_VERSIONS["framer-motion"]} — v12. \`motion.div\` / \`motion(Component)\`. \`AnimatePresence\` for exit animations. \`useAnimate()\`, \`useMotionValue()\`, \`useTransform()\`. \`layout\` prop for layout animations. \`whileHover\`, \`whileTap\`, \`whileFocus\`. \`variants\` for orchestrated animations.
+• firebase@${LATEST_VERSIONS["firebase"]} — Firebase v12 modular (tree-shakeable) SDK. Import per service: \`import { getAuth, signInWithEmailAndPassword } from "firebase/auth"\`. \`import { getFirestore, doc, getDoc } from "firebase/firestore"\`. Never import from "firebase/compat/*".
+• zustand persist: \`import { persist } from "zustand/middleware"\` — wrap the creator: \`create(persist(creator, { name: "key" }))\`.
+• react-hook-form@${LATEST_VERSIONS["react-hook-form"]} — v7. \`useForm<T>()\`, \`register\`, \`handleSubmit\`, \`formState: { errors }\`. Use \`zodResolver\` from \`@hookform/resolvers/zod\` for Zod integration.
+• lucide-react@${LATEST_VERSIONS["lucide-react"]} — use named icon exports: \`import { Home, Settings } from "lucide-react"\`. All icons accept \`className\`, \`size\`, \`strokeWidth\`.
+`
+      : "";
 
   return `Respond with ONLY the raw file content — no explanations, no markdown fences, no code block wrappers, no commentary of any kind.
-${qualityRules}${fileSpecificRules}
+${qualityRules}${versionContext}${fileSpecificRules}
 Target file: ${task.filePath}
 
 Relevant documentation:
@@ -202,7 +269,9 @@ Dependency file contents (already written — your imports must resolve to these
 ${depsSection}
 
 Instruction:
-${task.instruction}`;
+${task.instruction}
+
+STOP. OUTPUT THE FILE NOW. Do not re-check rules. Do not summarize. Do not write any preamble. The very next thing you output must be the first character of the file.`;
 }
 
 export function buildRetryPrompt(
@@ -217,7 +286,8 @@ VALIDATION ERROR TO FIX:
 ${validationError}
 
 REMINDER — your corrected file must also comply with:
-• "use client" as absolute first line if the file uses React hooks or browser APIs
+• "use client" as absolute first line if the file uses React hooks or browser APIs (components and pages only)
+• Files in utils/, lib/, stores/ must NEVER use React hooks — write pure TypeScript functions
 • No @ts-ignore, @ts-expect-error, or eslint-disable comments
 • No unused imports (noUnusedLocals is ON — unused imports are compile errors)
 • "@/" alias for all local imports — no relative paths
@@ -297,6 +367,210 @@ ${previousOutput}`;
  * Prompt to fix a file that caused errors in the full `next build`.
  * Used during the post-build repair loop.
  */
+export function buildModularizePrompt(
+  task: Task,
+  depContents: Record<string, string>,
+): string {
+  const depsSection =
+    Object.keys(depContents).length > 0
+      ? Object.entries(depContents)
+          .map(([path, content]) => `// FILE: ${path}\n${content}`)
+          .join("\n\n---\n\n")
+      : "None";
+
+  const dir = task.filePath.split("/")[0];
+  const base = task.filePath.replace(/\.[^.]+$/, "");
+
+  return `A code-generation task failed 3 times and could not produce a valid file. Split it into 2–4 smaller, focused sub-tasks.
+
+FAILED TASK:
+  File: ${task.filePath}
+  Instruction: ${task.instruction}
+
+DEPENDENCY FILE CONTENTS:
+${depsSection}
+
+SPLIT RULES:
+1. Produce 2–4 focused sub-tasks, each generating ≤60 lines of output.
+2. All sub-tasks are plain TypeScript modules in ${dir}/ — no React hooks, no JSX, no "use client".
+3. LAST sub-task MUST write to exactly: "${task.filePath}" as a barrel re-exporting everything from the earlier sub-task files.
+4. Earlier sub-tasks use NEW file paths like ${base}-a.ts, ${base}-b.ts (same directory, unique names).
+5. Each sub-task "dependsOn" must include:
+   - The original task's dependency IDs: ${JSON.stringify(task.dependsOn)}
+   - The IDs of all earlier sub-tasks in this split (so each one builds on the last)
+6. Each "instruction" must be concrete: state exactly which types/functions to export and their signatures.
+7. Generate a fresh UUID v4 for each "id".
+
+Output ONLY a JSON array wrapped in <subtasks> tags. No explanation, no markdown fences.
+
+<subtasks>
+[
+  {
+    "id": "<uuid-a>",
+    "title": "...",
+    "filePath": "${base}-a.ts",
+    "instruction": "...",
+    "dependsOn": ${JSON.stringify(task.dependsOn)}
+  },
+  {
+    "id": "<uuid-barrel>",
+    "title": "...",
+    "filePath": "${task.filePath}",
+    "instruction": "Re-export everything from the earlier sub-task files.",
+    "dependsOn": ${JSON.stringify([...task.dependsOn, "<uuid-a>"])}
+  }
+]
+</subtasks>`;
+}
+
+/**
+ * Prompt to fix a specific file that has TypeScript compile errors.
+ * Used by the post-generation error-fixer loop.
+ */
+export function buildErrorFixerPrompt(
+  filePath: string,
+  content: string,
+  errors: { line: number; col: number; message: string }[],
+): string {
+  const errorList = errors
+    .map((e) => `  Line ${e.line}:${e.col} — ${e.message}`)
+    .join("\n");
+
+  const fence = "```";
+  return `You are fixing TypeScript errors in a Next.js project.
+
+File: ${filePath}
+Current content:
+${fence}typescript
+${content}
+${fence}
+
+TypeScript errors to fix:
+${errorList}
+
+RULES:
+- Output the COMPLETE corrected file content only.
+- Wrap your output in <file>...</file> tags. No explanation outside the tags.
+- Do not truncate. Output every line of the file.
+- No @ts-ignore, no @ts-expect-error.
+- No unused imports (noUnusedLocals is on).
+- All local imports must use "@/" — no relative paths.
+
+<file>
+... corrected content here ...
+</file>`;
+}
+
+/**
+ * System prompt for the post-generation iterate mode.
+ * The LLM acts as a frontend engineer editing a live project.
+ */
+export function buildIterateSystemPrompt(
+  projectName: string,
+  fileTree: string,
+  devServerUrl: string | null,
+  livePageContext?: string,
+  fileContents?: string,
+): string {
+  const previewNote = devServerUrl
+    ? `The development server is running at ${devServerUrl}.`
+    : "The development server is not currently running.";
+
+  const browserSection = livePageContext
+    ? `\n--- LIVE PAGE CONTEXT (READ-ONLY — for reference only, do NOT output this) ---
+The following is the current rendered HTML of the app, captured from the running dev server.
+Use it to understand the current visual state and CSS classes already applied.
+Do NOT include this HTML in your file outputs — only output the SOURCE CODE changes.
+
+${livePageContext.slice(0, 8000)}
+--- END LIVE PAGE CONTEXT ---\n`
+    : "";
+
+  const fileContentsSection = fileContents
+    ? `\n--- RELEVANT SOURCE FILES — PRESERVE THEIR EXACT EXPORTS AND PROP TYPES ---
+The files below show the EXACT current source code. Before editing:
+• Copy the exact export name(s), prop interface, and TypeScript types — never rename them.
+• Copy the exact import paths — never change "@/" aliases or import sources.
+• Preserve all existing functionality (event handlers, state, callbacks) unless asked to remove it.
+Changing a prop name, export name, or TypeScript interface is NEVER acceptable unless the user explicitly requested it.
+
+${fileContents}
+--- END SOURCE FILES ---\n`
+    : "";
+
+  return `You are an expert frontend engineer iterating on a live Next.js project called "${projectName}".
+${previewNote}
+${browserSection}
+Project file tree:
+${fileTree}
+${fileContentsSection}
+EDITING RULES — follow these exactly:
+1. When making code changes, output the COMPLETE updated file(s) using this exact format:
+   <file path="relative/path/to/file.tsx">
+   ...full file content here...
+   </file>
+2. Output ONLY the files that need to change. Never output unchanged files.
+3. Always output the COMPLETE file — never truncate, never use "..." or "// rest of file" placeholders.
+4. Use "@/" for all local imports. Never relative paths.
+5. Preserve ALL existing functionality unless the user explicitly asks to remove it.
+6. Keep changes minimal and focused. One concern per response.
+7. "use client" must be the absolute first line of any file that uses React hooks.
+8. After listing your file edits, briefly describe what you changed and why.
+9. STUDY EXISTING CODE FIRST: Before editing any file, read its current content from the RELEVANT SOURCE FILES section. Never invent or assume types, interfaces, props, or export names — use exactly what exists in the file. If you don't see the file content above, do not guess its structure.
+10. TAILWIND v4 DYNAMIC CLASSES — CRITICAL: Tailwind v4's scanner does NOT process class names that are interpolated inside template literals. Use a plain ternary (no backtick template) or a pre-computed variable instead, so the full class names appear as static string literals the scanner can find:
+    ❌ className={\`\${isActive ? "bg-blue-500" : "bg-gray-200"}\`}  — NOT scanned
+    ✅ className={isActive ? "bg-blue-500" : "bg-gray-200"}  — scanned
+    ✅ const cls = isActive ? "bg-blue-500" : "bg-gray-200"; className={cls}  — scanned
+    For truly dynamic values (colors set at runtime), use inline style={{ ... }} instead.
+
+You may output multiple <file> tags in a single response if multiple files need to change.
+Never invent file paths — only edit files that exist in the project tree above.`;
+}
+
+export function buildAddFeaturesPrompt(
+  plan: ProjectPlan,
+  existingTaskPaths: string[],
+  featureDescription: string,
+): string {
+  const existingPathList = existingTaskPaths.join("\n");
+  return `You are a principal-level Next.js architect. An existing project is being expanded with new features.
+
+Existing project plan:
+${JSON.stringify(plan, null, 2)}
+
+Files already generated (DO NOT re-generate these — only create NEW files):
+${existingPathList}
+
+The user wants to add the following feature(s):
+${featureDescription}
+
+Generate ONLY the NEW tasks needed for this feature addition. Follow all the same rules as the original task generator:
+- Each task = exactly one file
+- File paths must NOT be in the existing file list above
+- Dependency order within the new tasks must be correct
+- dependsOn may reference existing filePaths as well as other new task IDs
+- Each file must be ≤120 lines
+- Use next@16, react@19, tailwind v4 APIs
+
+Output the tasks as a JSON array inside <tasks>...</tasks> tags. Each task must match:
+{
+  "id": string,          // unique slug like "feature-dashboard"
+  "title": string,
+  "filePath": string,    // App Router path, no src/ prefix
+  "instruction": string, // complete, unambiguous generation instruction
+  "dependsOn": string[], // IDs of tasks this depends on
+  "docsContext": string, // leave empty string ""
+  "status": "pending",
+  "retryCount": 0
+}
+
+<tasks>
+[...]
+</tasks>
+
+Only output the <tasks> block. No other text.`;
+}
+
 export function buildBuildFixPrompt(
   task: Task,
   dependencyFileContents: Record<string, string>,

@@ -1,9 +1,13 @@
 import { z } from "zod";
 import { streamChat } from "@/lib/llm/client";
 import { buildTaskGeneratorPrompt } from "@/lib/llm/prompts";
-import { fetchStackDocs } from "@/lib/llm/docFetcher";
+import { fetchStackDocs, TASK_GEN_MAX_CHARS } from "@/lib/llm/docFetcher";
 import { stackOptions } from "@/components/stack/stackRegistry";
 import type { LLMConfig, ProjectPlan, Task } from "@/types";
+
+/** Hard cap on tokens for the task-generation LLM call.
+ *  Scaled for 128K-context models — complex apps can produce 30+ tasks. */
+const TASK_GEN_MAX_TOKENS = 32_768;
 
 const TaskSchema = z.object({
   id: z.string(),
@@ -65,7 +69,10 @@ export async function generateTasks(
     plan.stack.selected.includes(o.id),
   );
   const docsContext = selectedOptions
-    .map((o) => `=== ${o.label} ===\n${docCache[o.id] ?? ""}`)
+    .map(
+      (o) =>
+        `=== ${o.label} ===\n${(docCache[o.id] ?? "").slice(0, TASK_GEN_MAX_CHARS)}`,
+    )
     .join("\n\n");
 
   // Step 3: Build prompt
@@ -81,6 +88,7 @@ export async function generateTasks(
     (chunk) => {
       fullResponse += chunk;
     },
+    TASK_GEN_MAX_TOKENS,
   );
 
   // Step 5: Parse + validate

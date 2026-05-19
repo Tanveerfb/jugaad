@@ -4,9 +4,43 @@ import { useTaskStore } from "@/stores/taskStore";
 import { useLLMConfigStore } from "@/stores/llmConfigStore";
 import { useFsStore } from "@/stores/fsStore";
 import TaskItem from "./TaskItem";
+import TaskGroup from "./TaskGroup";
 import { executeSingleTask } from "@/lib/executor/taskExecutor";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import type { Task } from "@/types";
+
+type GroupedItem =
+  | { kind: "single"; task: Task }
+  | { kind: "group"; dir: string; tasks: Task[] };
+
+function groupTasks(tasks: Task[]): GroupedItem[] {
+  const byDir = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const parts = task.filePath.split("/");
+    const dir = parts.slice(0, -1).join("/");
+    if (!byDir.has(dir)) byDir.set(dir, []);
+    byDir.get(dir)!.push(task);
+  }
+
+  const seen = new Set<string>();
+  const result: GroupedItem[] = [];
+
+  for (const task of tasks) {
+    const parts = task.filePath.split("/");
+    const dir = parts.slice(0, -1).join("/");
+    const siblings = byDir.get(dir) ?? [];
+
+    if (!dir || siblings.length < 2) {
+      result.push({ kind: "single", task });
+    } else if (!seen.has(dir)) {
+      seen.add(dir);
+      result.push({ kind: "group", dir, tasks: siblings });
+    }
+  }
+
+  return result;
+}
 
 function useElapsed(
   startedAt: number | null,
@@ -63,6 +97,8 @@ export default function TaskBoard() {
     }
   }
 
+  const grouped = groupTasks(tasks);
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -95,14 +131,24 @@ export default function TaskBoard() {
       )}
 
       <div className="flex-1 overflow-y-auto divide-y divide-border">
-        {tasks.map((task) => (
-          <TaskItem
-            key={task.id}
-            task={task}
-            isActive={task.id === activeTaskId}
-            onRetry={handleRetry}
-          />
-        ))}
+        {grouped.map((item) =>
+          item.kind === "group" ? (
+            <TaskGroup
+              key={item.dir}
+              dir={item.dir}
+              tasks={item.tasks}
+              activeTaskId={activeTaskId}
+              onRetry={handleRetry}
+            />
+          ) : (
+            <TaskItem
+              key={item.task.id}
+              task={item.task}
+              isActive={item.task.id === activeTaskId}
+              onRetry={handleRetry}
+            />
+          ),
+        )}
         {tasks.length === 0 && (
           <p className="p-6 text-sm text-muted-foreground text-center">
             No tasks yet. Confirm a plan to generate tasks.

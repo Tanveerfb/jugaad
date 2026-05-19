@@ -6,12 +6,32 @@
 // 5. Doc chunks are injected per task, not globally.
 
 import { streamChat } from "@/lib/llm/client";
+
+/** Per-file token budget for the task executor. Set high enough to accommodate
+ *  thinking-model reasoning tokens (e.g. qwen3.5-9b reasoning_content) before
+ *  the actual file content is emitted. Model context window is 96k tokens. */
+const TASK_EXEC_MAX_TOKENS = 65_536;
+
+/** Disable thinking/reasoning tokens for Qwen3-style models.
+ *  0 = fully disable thinking (fast code generation).
+ *  Set to a positive number to allow limited thinking tokens.
+ *  undefined = no budget cap (not recommended for code tasks). */
+const TASK_THINKING_BUDGET = 0;
+
+/**
+ * Prefix added to every task-executor user message.
+ * `/no_think` is a qwen3 built-in that disables the <think>...</think> mode,
+ * producing output immediately without a long reasoning preamble.
+ * Other models silently ignore this line.
+ */
+const NO_THINK_PREFIX = "/no_think\n";
 import {
   buildTaskExecutorPrompt,
   buildRetryPrompt,
   buildFixerPrompt,
   buildTypecheckFixPrompt,
   buildBuildFixPrompt,
+  buildModularizePrompt,
 } from "@/lib/llm/prompts";
 import { validateOutput } from "./validator";
 import { writeFile } from "@/lib/fs/writer";
@@ -34,18 +54,57 @@ export async function executeAll(
   // Record the effective project path so TaskBoard can use it for retries
   useFsStore.getState().setActiveProjectPath(projectPath);
 
-  for (const task of tasks) {
-    // 0. Skip tasks that are already done (supports resume-after-error)
+  // ── Phase 0a: Write project manifest immediately ─────────────────────────
+  // Writing jugaad.json + conversation before any LLM work so the project
+  // appears in ProjectBrowser as soon as the build starts.
+  const plan = useProjectPlanStore.getState().plan;
+  const conversation = useProjectPlanStore.getState().conversation;
+  if (plan) {
+    try {
+      await writeFile(
+        projectPath,
+        "jugaad.json",
+        JSON.stringify(plan, null, 2),
+      );
+    } catch {
+      // non-fatal
+    }
+  }
+  if (conversation.length > 0) {
+    try {
+      await writeFile(
+        projectPath,
+        "jugaad-conversation.json",
+        JSON.stringify(conversation, null, 2),
+      );
+    } catch {
+      // non-fatal
+    }
+  }
+
+  // Tracks whether npm install ran mid-loop (after package.json was written).
+  // A fallback install runs at the end if package.json was never generated.
+  let npmInstallDone = false;
+
+  // Use an indexed loop so we can splice sub-tasks in mid-iteration when a
+  // task is auto-split. tasks.length is re-evaluated on every iteration.
+  for (let taskIdx = 0; taskIdx < tasks.length; taskIdx++) {
+    const task = tasks[taskIdx];
+    // 0. Skip tasks that are already done or split (supports resume-after-error)
     const currentStatus = useTaskStore
       .getState()
       .tasks.find((t) => t.id === task.id)?.status;
-    if (currentStatus === "done") continue;
+    if (currentStatus === "done" || currentStatus === "split") continue;
 
-    // 1. Pre-check: all declared dependencies must be "done" in the store
+    // 1. Pre-check: all declared dependencies must be "done" (or "split") in the store
     const storeTasks = useTaskStore.getState().tasks;
     for (const depId of task.dependsOn) {
-      const dep = storeTasks.find((t) => t.id === depId);
-      if (!dep || dep.status !== "done") {
+      // Match by ID first; fall back to filePath for projects where the LLM
+      // wrote file paths into dependsOn instead of task IDs.
+      const dep = storeTasks.find(
+        (t) => t.id === depId || t.filePath === depId,
+      );
+      if (!dep || (dep.status !== "done" && dep.status !== "split")) {
         const msg = `Dependency ${depId} not complete for task ${task.id}`;
         useTaskStore.getState().setTaskError(task.id, msg);
         useTaskStore.getState().updateTaskStatus(task.id, "error");
@@ -60,46 +119,103 @@ export async function executeAll(
     useTaskStore.getState().updateTaskStatus(task.id, "running");
     useTaskStore.getState().clearStream();
 
-    // 3. Build dependency file contents from already-completed task outputs
+    // 3. Build dependency file contents from already-completed task outputs.
+    //    For "split" deps, fall back to the task that produced the same filePath.
     const depContents: Record<string, string> = {};
     for (const depId of task.dependsOn) {
+      // Also match by filePath for projects where dependsOn stores paths not IDs.
       const completedTask = useTaskStore
         .getState()
-        .tasks.find((t) => t.id === depId);
-      if (completedTask?.output) {
+        .tasks.find((t) => t.id === depId || t.filePath === depId);
+      if (completedTask?.status === "done" && completedTask.output) {
         depContents[completedTask.filePath] = completedTask.output;
+      } else if (completedTask?.status === "split") {
+        // Original task was auto-split — find the sub-task that wrote to the same path
+        const replacement = useTaskStore
+          .getState()
+          .tasks.find(
+            (t) =>
+              t.filePath === completedTask.filePath &&
+              t.status === "done" &&
+              t.output,
+          );
+        if (replacement?.output) {
+          depContents[replacement.filePath] = replacement.output;
+        }
       }
     }
 
     let lastOutput = "";
     let lastError = "";
+    let lastTcErrors: { line: number; col: number; message: string }[] = [];
     let succeeded = false;
+    let wasSplit = false;
 
     // 4. Retry loop — max 3 LLM attempts (attempts 0, 1, 2).
     //    After each successful write, an isolated TypeScript check validates
     //    the file. Errors in the file itself trigger an additional retry.
     for (let attempt = 0; attempt < 3; attempt++) {
-      const prompt =
+      const rawPrompt =
         attempt === 0
           ? task.isSystem
             ? buildFixerPrompt(depContents)
             : buildTaskExecutorPrompt(task, depContents)
-          : buildRetryPrompt(lastOutput, lastError);
+          : lastTcErrors.length > 0
+            ? buildTypecheckFixPrompt(
+                task,
+                depContents,
+                lastTcErrors,
+                lastOutput,
+              )
+            : lastOutput
+              ? buildRetryPrompt(lastOutput, lastError)
+              : buildTaskExecutorPrompt(task, depContents);
+      // Prepend /no_think to suppress qwen3 extended thinking (other models ignore it).
+      const prompt = NO_THINK_PREFIX + rawPrompt;
 
       let fullOutput = "";
-      await streamChat(
-        [{ id: "exec", role: "user", content: prompt, timestamp: Date.now() }],
-        config,
-        (chunk) => {
-          fullOutput += chunk;
-          useTaskStore.getState().appendToStream(chunk);
-        },
-      );
+      try {
+        await streamChat(
+          [
+            {
+              id: "exec",
+              role: "user",
+              content: prompt,
+              timestamp: Date.now(),
+            },
+          ],
+          config,
+          (chunk) => {
+            fullOutput += chunk;
+            useTaskStore.getState().appendToStream(chunk);
+          },
+          TASK_EXEC_MAX_TOKENS,
+          (chunk) => useTaskStore.getState().appendToThinking(chunk),
+          TASK_THINKING_BUDGET,
+        );
+      } catch (streamErr) {
+        // Treat stream errors (connection drop, stall timeout) as retryable failures.
+        lastError = (streamErr as Error).message;
+        lastOutput = "";
+        if (attempt < 2) {
+          useTaskStore.getState().incrementRetry(task.id);
+          useTaskStore.getState().clearStream();
+          continue;
+        }
+        useTaskStore.getState().setTaskError(task.id, lastError);
+        useTaskStore.getState().updateTaskStatus(task.id, "error");
+        useTaskStore.getState().clearStream();
+        useTaskStore.getState().setActiveTask(null);
+        useTaskStore.getState().setIsExecuting(false);
+        toast.error(`Task failed: ${task.title} — ${lastError}`);
+        return;
+      }
 
       const { valid, error } = validateOutput(task.filePath, fullOutput);
 
       if (!valid) {
         // Structural/syntax validation failed
+        lastTcErrors = [];
         lastOutput = fullOutput;
         lastError = error ?? "Unknown validation error";
 
@@ -118,11 +234,23 @@ export async function executeAll(
             `${task.title} failed — run npm install manually in the output folder`,
           );
         } else {
-          useTaskStore.getState().setIsExecuting(false);
-          toast.error(
-            `Task failed: ${task.title} — fix required before continuing`,
-          );
-          return;
+          // Try to auto-split the task into smaller sub-tasks
+          const split = await tryModularize(task, depContents, config);
+          if (split.length > 0) {
+            tasks.splice(taskIdx + 1, 0, ...split);
+            useTaskStore.getState().insertTasksAfter(task.id, split);
+            useTaskStore.getState().markAsSplit(task.id);
+            wasSplit = true;
+            toast.info(
+              `"${task.title}" was auto-split into ${split.length} smaller tasks`,
+            );
+          } else {
+            useTaskStore.getState().setIsExecuting(false);
+            toast.error(
+              `Task failed: ${task.title} — fix required before continuing`,
+            );
+            return;
+          }
         }
         break;
       }
@@ -150,6 +278,7 @@ export async function executeAll(
             };
             if (tcData.errors.length > 0) {
               // File has real TypeScript errors — retry with detailed feedback
+              lastTcErrors = tcData.errors;
               const tcErrorSummary = tcData.errors
                 .map((e) => `Line ${e.line}:${e.col} — ${e.message}`)
                 .join("\n");
@@ -165,16 +294,27 @@ export async function executeAll(
                 // by setting lastError (used by buildRetryPrompt on next attempt).
                 continue;
               }
-              // Third attempt still has TS errors — halt build
+              // Third attempt still has TS errors — try to auto-split
               useTaskStore.getState().setTaskError(task.id, lastError);
               useTaskStore.getState().updateTaskStatus(task.id, "error");
               useTaskStore.getState().clearStream();
               useTaskStore.getState().setActiveTask(null);
-              useTaskStore.getState().setIsExecuting(false);
-              toast.error(
-                `Task failed: ${task.title} — TypeScript errors could not be resolved`,
-              );
-              return;
+              const split = await tryModularize(task, depContents, config);
+              if (split.length > 0) {
+                tasks.splice(taskIdx + 1, 0, ...split);
+                useTaskStore.getState().insertTasksAfter(task.id, split);
+                useTaskStore.getState().markAsSplit(task.id);
+                wasSplit = true;
+                toast.info(
+                  `"${task.title}" was auto-split into ${split.length} smaller tasks`,
+                );
+              } else {
+                useTaskStore.getState().setIsExecuting(false);
+                toast.error(
+                  `Task failed: ${task.title} — TypeScript errors could not be resolved`,
+                );
+                return;
+              }
             }
           }
         } catch {
@@ -188,40 +328,193 @@ export async function executeAll(
       break;
     }
 
-    if (!succeeded) {
+    if (!succeeded && !wasSplit) {
       useTaskStore.getState().setIsExecuting(false);
       return;
     }
 
     useTaskStore.getState().clearStream();
     useTaskStore.getState().setActiveTask(null);
+
+    // ── Early npm install ─────────────────────────────────────────────────
+    // Run immediately after package.json is written so that every subsequent
+    // LLM task operates against the real installed package tree / type defs.
+    if (task.filePath === "package.json" && !npmInstallDone) {
+      npmInstallDone = true;
+      toast.loading("Installing dependencies…", { id: "npm-install" });
+      try {
+        const resp = await fetch("/api/install", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectPath }),
+        });
+        if (resp.ok) {
+          toast.success("Dependencies installed!", { id: "npm-install" });
+        } else {
+          const data = (await resp.json()) as { error?: string };
+          toast.warning(
+            `npm install failed: ${data.error ?? "unknown error"} — run it manually`,
+            { id: "npm-install" },
+          );
+        }
+      } catch {
+        toast.warning(
+          "Could not run npm install — run it manually in the output folder",
+          { id: "npm-install" },
+        );
+      }
+    }
   }
 
   useTaskStore.getState().setIsExecuting(false);
   useTaskStore.getState().setBuildFinish();
 
-  // ── Phase 2: npm install ───────────────────────────────────────────────────
-  try {
-    toast.loading("Installing dependencies…", { id: "npm-install" });
-    const resp = await fetch("/api/install", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectPath }),
-    });
-    if (resp.ok) {
-      toast.success("Dependencies installed!", { id: "npm-install" });
-    } else {
-      const data = (await resp.json()) as { error?: string };
+  // ── Fallback npm install (if package.json was never generated) ────────────
+  if (!npmInstallDone) {
+    try {
+      toast.loading("Installing dependencies…", { id: "npm-install" });
+      const resp = await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectPath }),
+      });
+      if (resp.ok) {
+        toast.success("Dependencies installed!", { id: "npm-install" });
+      } else {
+        const data = (await resp.json()) as { error?: string };
+        toast.warning(
+          `npm install failed: ${data.error ?? "unknown error"} — run it manually`,
+          { id: "npm-install" },
+        );
+      }
+    } catch {
       toast.warning(
-        `npm install failed: ${data.error ?? "unknown error"} — run it manually`,
+        "Could not run npm install — run it manually in the output folder",
         { id: "npm-install" },
       );
     }
+  }
+
+  // ── Phase 2.5: Project-wide TypeScript check ─────────────────────────────
+  // Runs `tsc --noEmit` against the full project (all imports resolved).
+  // This catches cross-file type errors that the per-file --noResolve check
+  // misses: wrong string literal values, non-exported symbols, prop mismatches.
+  // Errors are grouped by file and each errored file is re-generated once with
+  // the full project context before proceeding to next build.
+  toast.loading("Type-checking project…", { id: "tsc-check" });
+  try {
+    const tcResp = await fetch("/api/typecheck", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectPath, filePath: "**" }),
+    });
+    if (tcResp.ok) {
+      const tcData = (await tcResp.json()) as {
+        errors: { file: string; line: number; col: number; message: string }[];
+      };
+
+      if (tcData.errors.length > 0) {
+        toast.loading(`Fixing ${tcData.errors.length} type error(s)…`, {
+          id: "tsc-check",
+        });
+
+        const allProjectFiles: Record<string, string> = {};
+        for (const t of useTaskStore.getState().tasks) {
+          if (t.output) allProjectFiles[t.filePath] = t.output;
+        }
+
+        // Group errors by file and repair each errored file once
+        const errorsByFile = new Map<
+          string,
+          { line: number; col: number; message: string }[]
+        >();
+        for (const err of tcData.errors) {
+          // Normalize to forward-slash relative path for task lookup
+          const rel = err.file
+            .replace(/\\/g, "/")
+            .replace(/^.*?([^/]+\/[^/]+)$/, "$1");
+          const taskFilePath = Object.keys(allProjectFiles).find((p) =>
+            err.file.replace(/\\/g, "/").endsWith(p.replace(/\\/g, "/")),
+          );
+          if (!taskFilePath) continue;
+          if (!errorsByFile.has(taskFilePath))
+            errorsByFile.set(taskFilePath, []);
+          errorsByFile
+            .get(taskFilePath)!
+            .push({ line: err.line, col: err.col, message: err.message });
+        }
+
+        for (const [erroredFilePath, fileErrors] of errorsByFile) {
+          const erroredTask = useTaskStore
+            .getState()
+            .tasks.find((t) => t.filePath === erroredFilePath);
+          if (!erroredTask) continue;
+
+          const repairDeps: Record<string, string> = {};
+          for (const depId of erroredTask.dependsOn) {
+            const dep = useTaskStore
+              .getState()
+              .tasks.find((t) => t.id === depId);
+            if (dep?.output) repairDeps[dep.filePath] = dep.output;
+          }
+
+          useTaskStore.getState().setActiveTask(erroredTask.id);
+          useTaskStore.getState().updateTaskStatus(erroredTask.id, "running");
+          useTaskStore.getState().clearStream();
+
+          const fixPrompt = buildBuildFixPrompt(
+            erroredTask,
+            repairDeps,
+            fileErrors.map((e) => ({
+              file: erroredFilePath,
+              message: `Line ${e.line}:${e.col} — ${e.message}`,
+            })),
+            erroredTask.output ?? "",
+            allProjectFiles,
+          );
+
+          let fixedOutput = "";
+          await streamChat(
+            [
+              {
+                id: "tsc-repair",
+                role: "user",
+                content: fixPrompt,
+                timestamp: Date.now(),
+              },
+            ],
+            config,
+            (chunk) => {
+              fixedOutput += chunk;
+              useTaskStore.getState().appendToStream(chunk);
+            },
+            TASK_EXEC_MAX_TOKENS,
+            (chunk) => useTaskStore.getState().appendToThinking(chunk),
+            TASK_THINKING_BUDGET,
+          );
+
+          const { valid: fixValid } = validateOutput(
+            erroredTask.filePath,
+            fixedOutput,
+          );
+          if (fixValid) {
+            await writeFile(projectPath, erroredTask.filePath, fixedOutput);
+            useTaskStore.getState().setTaskOutput(erroredTask.id, fixedOutput);
+            useTaskStore.getState().updateTaskStatus(erroredTask.id, "done");
+          }
+
+          useTaskStore.getState().clearStream();
+          useTaskStore.getState().setActiveTask(null);
+        }
+
+        toast.success("Type errors repaired.", { id: "tsc-check" });
+      } else {
+        toast.success("Type check passed.", { id: "tsc-check" });
+      }
+    }
   } catch {
-    toast.warning(
-      "Could not run npm install — run it manually in the output folder",
-      { id: "npm-install" },
-    );
+    // Non-fatal — proceed to next build which will surface any remaining errors
+    toast.dismiss("tsc-check");
   }
 
   // ── Phase 3: next build verification + repair loop ────────────────────────
@@ -241,7 +534,6 @@ export async function executeAll(
 
     let buildSuccess = false;
     let buildErrors: { file: string; message: string }[] = [];
-    let buildRaw = "";
 
     try {
       const buildResp = await fetch("/api/build", {
@@ -252,11 +544,9 @@ export async function executeAll(
       const buildData = (await buildResp.json()) as {
         success: boolean;
         errors: { file: string; message: string }[];
-        raw: string;
       };
       buildSuccess = buildData.success;
       buildErrors = buildData.errors ?? [];
-      buildRaw = buildData.raw ?? "";
     } catch {
       toast.warning("Build check unavailable — project may still work", {
         id: "build-verify",
@@ -342,6 +632,9 @@ export async function executeAll(
           fixedOutput += chunk;
           useTaskStore.getState().appendToStream(chunk);
         },
+        TASK_EXEC_MAX_TOKENS,
+        (chunk) => useTaskStore.getState().appendToThinking(chunk),
+        TASK_THINKING_BUDGET,
       );
 
       const { valid: fixValid } = validateOutput(
@@ -385,26 +678,82 @@ export async function executeAll(
     }
   }
 
-  // ── Phase 4: Write project manifest ───────────────────────────────────────
-  const plan = useProjectPlanStore.getState().plan;
-  if (plan) {
-    try {
-      await writeFile(
-        projectPath,
-        "jugaad.json",
-        JSON.stringify(plan, null, 2),
-      );
-    } catch {
-      // non-fatal
-    }
-  }
-
   if (buildPassed) {
     toast.success("Project built successfully and verified! 🎉");
   } else {
     toast.success(
       "Project files generated — review build output for any remaining issues.",
     );
+  }
+}
+
+/**
+ * Ask the LLM to split a failed task into 2-4 smaller sub-tasks.
+ * Returns the new Task objects ready to be spliced into the queue, or []
+ * if the LLM output couldn't be parsed.
+ */
+async function tryModularize(
+  task: Task,
+  depContents: Record<string, string>,
+  config: LLMConfig,
+): Promise<Task[]> {
+  toast.loading(`Auto-splitting "${task.title}"…`, { id: "modularize" });
+  let rawOutput = "";
+  try {
+    await streamChat(
+      [
+        {
+          id: "modularize",
+          role: "user",
+          content: NO_THINK_PREFIX + buildModularizePrompt(task, depContents),
+          timestamp: Date.now(),
+        },
+      ],
+      config,
+      (chunk) => {
+        rawOutput += chunk;
+      },
+      8_192,
+      (chunk) => useTaskStore.getState().appendToThinking(chunk),
+      TASK_THINKING_BUDGET,
+    );
+  } catch {
+    toast.dismiss("modularize");
+    return [];
+  }
+
+  // Extract JSON from <subtasks>…</subtasks>
+  const match = rawOutput.match(/<subtasks>([\s\S]*?)<\/subtasks>/);
+  if (!match) {
+    toast.dismiss("modularize");
+    return [];
+  }
+
+  try {
+    const raw = JSON.parse(match[1].trim()) as {
+      id: string;
+      title: string;
+      filePath: string;
+      instruction: string;
+      dependsOn: string[];
+    }[];
+
+    const subTasks: Task[] = raw.map((s) => ({
+      id: s.id,
+      title: s.title,
+      filePath: s.filePath,
+      instruction: s.instruction,
+      dependsOn: Array.isArray(s.dependsOn) ? s.dependsOn : [],
+      docsContext: task.docsContext,
+      status: "pending" as const,
+      retryCount: 0,
+    }));
+
+    toast.dismiss("modularize");
+    return subTasks;
+  } catch {
+    toast.dismiss("modularize");
+    return [];
   }
 }
 
@@ -438,10 +787,11 @@ export async function executeSingleTask(
   let succeeded = false;
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    const prompt =
-      attempt === 0
+    const rawPrompt =
+      attempt === 0 || !lastOutput
         ? buildTaskExecutorPrompt(task, depContents)
         : buildRetryPrompt(lastOutput, lastError);
+    const prompt = NO_THINK_PREFIX + rawPrompt;
 
     let fullOutput = "";
     await streamChat(
@@ -451,6 +801,9 @@ export async function executeSingleTask(
         fullOutput += chunk;
         useTaskStore.getState().appendToStream(chunk);
       },
+      TASK_EXEC_MAX_TOKENS,
+      (chunk) => useTaskStore.getState().appendToThinking(chunk),
+      TASK_THINKING_BUDGET,
     );
 
     const { valid, error } = validateOutput(task.filePath, fullOutput);
