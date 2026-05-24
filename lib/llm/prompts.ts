@@ -66,7 +66,16 @@ Rules:
 3. File paths use Next.js App Router convention (e.g. "app/dashboard/page.tsx"). No src/ prefix.
 4. Every page.tsx and layout.tsx must have a default export.
 5. Every route.ts must export at least one of GET/POST/PUT/DELETE.
-6. The project is always initialized with \`npx create-next-app@latest\` before your generated files are written. Therefore, do NOT generate tsconfig.json or postcss.config.mjs — they are pre-configured correctly. Start tasks in this order: package.json (with all stack-specific deps) → next.config.ts (only if stack needs custom config) → app/globals.css → types → utils → components → pages.
+6. The project is always initialized with \`npx create-next-app@latest\` before your generated files are written. Therefore, do NOT generate tsconfig.json or postcss.config.mjs — they are pre-configured correctly. Start tasks in this order: package.json (with all stack-specific deps) → next.config.ts (only if stack needs custom config) → app/globals.css → types → utils → components/ui primitives → other components → pages.
+   ⚠ NEVER add tsconfig.json as a task. The scaffold already creates it with \`paths: { "@/*": ["./*"] }\` — generating it will overwrite that config and break every @/ import in the project.
+   MANDATORY UI PRIMITIVES — ALWAYS generate these files early (before any component that uses them):
+   • lib/utils.ts — exports: cn() function using clsx + tailwind-merge. Example: 'import { type ClassValue, clsx } from "clsx"; import { twMerge } from "tailwind-merge"; export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }'. Also add clsx and tailwind-merge to package.json dependencies.
+   • components/ui/button.tsx — exports: Button component with variant prop ("default" | "secondary" | "ghost" | "destructive" | "outline" | "link"), size prop ("sm" | "md" | "lg"), disabled + loading states. Uses: 'bg-primary text-primary-foreground hover:bg-primary/90' (default), 'bg-secondary text-secondary-foreground hover:bg-secondary/80' (secondary), 'hover:bg-accent hover:text-accent-foreground' (ghost), 'bg-destructive text-destructive-foreground hover:bg-destructive/90' (destructive). Uses cn() from @/lib/utils.
+   • components/ui/card.tsx — exports: Card component with optional title, description, footer slots. Classes: 'bg-card border border-border rounded-xl shadow-lg shadow-black/20 p-6'.
+   • components/ui/input.tsx — exports: Input component wrapping <input>. Classes: 'w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all'. Include label prop and error prop.
+   • components/ui/badge.tsx — exports: Badge with variant prop ("default" | "secondary" | "destructive" | "outline"). Small pill: 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium'.
+   These primitives use ONLY Tailwind utility classes that map to the shadcn-compatible CSS variables defined in globals.css — no external UI library imports.
+   EXCEPTION: If "shadcn" is in the stack, do NOT generate any files inside components/ui/ or lib/utils.ts — shadcn has already installed those files automatically before generation begins. You MUST import from them (e.g. import { Button } from "@/components/ui/button") — just never generate or overwrite them. The shadcn components available are: button, card, input, textarea, label, badge, avatar, separator, skeleton, tabs, dialog, alert-dialog, select, checkbox, switch, scroll-area, dropdown-menu, tooltip, toast, alert, table, progress. Use their standard shadcn prop APIs (variant="default"|"destructive"|"outline"|"secondary"|"ghost"|"link" for Button, etc.).
 7. Include ALL necessary files: config, types, utils, stores, components, and pages. Do not omit any file the app needs to run.
 20. FILE SIZE LIMIT — CRITICAL: Every generated file must be ≤120 lines. This is non-negotiable because each file is written by an LLM with a limited context window.
     - If a module (utility, store, component) would exceed ~120 lines, SPLIT it into multiple focused files. Add a barrel index.ts/index.tsx that re-exports everything.
@@ -89,7 +98,7 @@ Rules:
    • Firebase v12: modular SDK only — \`import { getAuth } from "firebase/auth"\`. Never \`firebase/compat\`.
 21. TYPE LITERAL VERBATIM — CRITICAL: When a type definition uses exact string literal unions (e.g. \`type Color = 'white' | 'black'\`, \`type Status = 'ongoing' | 'checkmate'\`), ALL implementation files that produce or consume those values MUST use the exact strings verbatim — never abbreviate or shorten them (never \`'w'\`, \`'b'\`, never \`'W'\`, \`'B'\`). Task instructions for type-consuming files MUST call out the exact values. Example: "Color is \`'white'\` or \`'black'\` — never \`'w'\` or \`'b'\`".
    Additionally: type union syntax (e.g. \`'a' | 'b' | 'c'\`) is valid ONLY inside \`type\`, \`interface\`, or function parameter declarations. In an object literal value position (e.g. \`{ key: 'a' | 'b' }\`) it is a runtime bitwise OR that evaluates to \`0\` — always assign a single concrete string value there.
-9. TAILWIND v4: Do NOT generate tailwind.config.ts / tailwind.config.js. Tailwind v4 is CSS-first. postcss.config must use "@tailwindcss/postcss" only. globals.css must start with '@import "tailwindcss";' — no @tailwind directives.
+9. TAILWIND v4: Do NOT generate tailwind.config.ts / tailwind.config.js. Tailwind v4 is CSS-first. postcss.config must use "@tailwindcss/postcss" only. globals.css must start with '@import "tailwindcss";' followed immediately by '@source "./**/*.{ts,tsx,js,jsx}";' — no @tailwind directives, no @tailwind base/components/utilities.
    TAILWIND v4 DYNAMIC CLASSES — CRITICAL: The scanner does NOT process Tailwind class names interpolated inside template literals. Task instructions must specify that components use plain ternaries or pre-computed variables for conditional classes — never \`\${condition ? "bg-X" : "bg-Y"}\` inside a template literal. For runtime-dynamic values, use inline style={{ ... }} instead.
    LAYOUT RELIABILITY: For fixed-grid UIs (game boards, calendars, data grids), use CSS Grid with explicit row/column counts. To make a grid container perfectly square, use the padding-bottom trick: set the outer wrapper to position:relative + paddingBottom:"100%", and make the inner grid div position:absolute with inset:0. This ensures CSS Grid \`1fr\` rows resolve against a definite height. Do NOT rely on Tailwind's aspect-square class alone — CSS Grid fr-unit rows cannot resolve their height against an aspect-ratio-derived container height. Example: <div style={{position:"relative",width:"100%",paddingBottom:"100%"}}><div style={{position:"absolute",inset:0,display:"grid",gridTemplateColumns:"repeat(8,1fr)",gridTemplateRows:"repeat(8,1fr)"}}>...</div></div>
 10. "use client": Any file using React hooks, event handlers, or browser APIs must have "use client" as its absolute first line (before all imports). Server Components (data fetching, static) must NOT have it. Route handlers (route.ts) must NOT have it.
@@ -99,7 +108,48 @@ Rules:
 13. IMPORT ALIAS: All generated files use "@/" for local imports. Never relative paths ("../X", "./X").
 14. NEVER import from "next/router" — use "next/navigation" (useRouter, usePathname, redirect, useParams, useSearchParams).
 15. Every component or page doing async work must handle loading AND error states. No indeterminate UI states.
-16. Design quality: Clean, minimal, polished UI. Real content — no lorem ipsum. Consistent Tailwind spacing (4-unit scale). Semantic HTML. Responsive 320px→1440px. Accessible: labels, aria attributes, keyboard navigation.
+16. DESIGN QUALITY — CRITICAL. Every UI component and page must look like a polished, professional dark-mode SaaS product. Follow these exact patterns:
+
+   COLORS — use the shadcn-compatible Tailwind utilities defined by globals.css @theme inline:
+   • Backgrounds: bg-background (page), bg-card (cards/panels), bg-secondary or bg-muted (inputs/hover areas)
+   • Text: text-foreground (primary), text-muted-foreground (secondary/captions/labels)
+   • Borders: border-border
+   • Primary actions: bg-primary text-primary-foreground hover:bg-primary/90
+   • Destructive/danger: bg-destructive text-destructive-foreground (button), text-destructive (inline error)
+   • Muted/subtle: bg-muted text-muted-foreground
+   • Ring/focus: focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none
+   • Popover/dropdown: bg-popover text-popover-foreground border-border
+   ⚠ NEVER use bg-[--color-bg], bg-[--color-surface], text-[--color-text], or any arbitrary CSS variable reference — use the named utilities above.
+
+   LAYOUT:
+   • Page wrapper: min-h-screen bg-background — full height dark background
+   • Content max-width: max-w-7xl mx-auto px-4 sm:px-6 lg:px-8
+   • Card/panel: bg-card border border-border rounded-xl shadow-lg shadow-black/20 p-6
+   • Section spacing: space-y-8 between major sections, gap-4 or gap-6 in grids
+   • Grid layouts: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4
+
+   TYPOGRAPHY:
+   • Page titles: text-3xl font-bold text-foreground tracking-tight
+   • Section headings: text-xl font-semibold text-foreground
+   • Body text: text-sm text-muted-foreground leading-relaxed
+   • Labels: text-xs font-medium text-muted-foreground uppercase tracking-wide
+
+   INTERACTIVE ELEMENTS:
+   • Primary button: bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-4 py-2 rounded-lg transition-colors
+   • Secondary button: bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium px-4 py-2 rounded-lg border border-border transition-colors
+   • Ghost button: hover:bg-accent hover:text-accent-foreground px-4 py-2 rounded-lg transition-colors
+   • Input/textarea: w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all
+   • Badge/tag: inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+
+   VISUAL POLISH:
+   • Hover states on all interactive elements (transition-colors or transition-all)
+   • Subtle shadows on cards: shadow-lg shadow-black/20
+   • Gradient accents: bg-gradient-to-br from-primary/20 to-transparent
+   • Loading skeletons: animate-pulse bg-muted rounded
+   • Empty states: centered, with an icon, title, and a call-to-action button
+   • No Lorem Ipsum — use real, domain-appropriate placeholder content
+   • Responsive 320px→1440px: mobile-first, use sm:/md:/lg: breakpoint prefixes
+   • Accessible: all inputs have labels, buttons have descriptive text, images have alt
 17. Prefer React Server Components for data fetching. Only use "use client" when genuine interactivity is required.
 18. Task instructions must be specific: describe what the file exports, what props/types it uses, how it connects to other files, and any key implementation details.
 19. AUTH PAGES (MANDATORY): If authStrategy is not "none", you MUST generate ALL of the following — never omit them:
@@ -158,7 +208,76 @@ export function buildTaskExecutorPrompt(
     task.filePath.match(/globals\.css$/) ||
     task.filePath.match(/global\.css$/)
   ) {
-    fileSpecificRules = `\nCRITICAL: Use Tailwind v4 CSS import. Start the file with '@import "tailwindcss";' — do NOT use @tailwind base/components/utilities directives.\n`;
+    fileSpecificRules = `\nCRITICAL: Use Tailwind v4 CSS import. Follow this EXACT template — do NOT use @tailwind directives, do NOT use tailwind.config.ts:
+
+@import "tailwindcss";
+@source "./**/*.{ts,tsx,js,jsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  :root {
+    --radius: 0.625rem;
+    --background: oklch(0.09 0.005 285);
+    --foreground: oklch(0.985 0.002 248);
+    --card: oklch(0.13 0.005 285);
+    --card-foreground: oklch(0.985 0.002 248);
+    --popover: oklch(0.13 0.005 285);
+    --popover-foreground: oklch(0.985 0.002 248);
+    --primary: oklch(0.60 0.19 268);
+    --primary-foreground: oklch(0.98 0 0);
+    --secondary: oklch(0.18 0.005 285);
+    --secondary-foreground: oklch(0.985 0.002 248);
+    --muted: oklch(0.18 0.005 285);
+    --muted-foreground: oklch(0.64 0.01 285);
+    --accent: oklch(0.22 0.005 285);
+    --accent-foreground: oklch(0.985 0.002 248);
+    --destructive: oklch(0.60 0.20 25);
+    --border: oklch(0.26 0.005 285);
+    --input: oklch(0.22 0.005 285);
+    --ring: oklch(0.60 0.19 268);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--primary); color: var(--primary-foreground); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--card); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+}
+
+Customize the oklch() color values in :root to match the app's personality while keeping the variable names exactly as shown. The @theme inline block must stay verbatim — it maps CSS vars to Tailwind utilities (bg-background, text-foreground, bg-primary, etc.).
+\n`;
   } else if (task.filePath.match(/tailwind\.config\.(ts|js|mjs)$/)) {
     fileSpecificRules = `\nCRITICAL: Tailwind v4 does not use a JavaScript config file. Instead, output a globals.css with '@import "tailwindcss";' and any theme customizations using @theme blocks. If you must output this file, make it minimal and note that v4 config is CSS-first.\n`;
   } else if (task.filePath.match(/next\.config\.(ts|js|mjs)$/)) {
@@ -217,7 +336,7 @@ ${
 UI QUALITY:
 • Semantic HTML. Never <div onClick> — use <button type="button">. Form inputs need <label>.
 • Responsive 320px–1440px. One <h1> per page. Show loading + error states. Unique stable keys on lists.
-• Tailwind 4-unit spacing. Semantic color variables (background, foreground, muted, border, primary). Dark-mode safe.
+• Tailwind 4-unit spacing. Semantic color utilities (bg-background, bg-card, text-foreground, text-muted-foreground, border-border, bg-primary, text-primary-foreground). Dark-mode safe. NEVER use arbitrary CSS variable references like bg-[--color-bg] or text-[--color-text] — use the named utilities.
 • TAILWIND v4 DYNAMIC CLASSES — CRITICAL: Tailwind v4's scanner does NOT process class names interpolated inside template literals. Never do this:
     ❌ className={\`\${isActive ? "bg-blue-500" : "bg-gray-200"} p-4\`}
     ❌ className={\`bg-\${color}-500\`}
@@ -466,12 +585,14 @@ RULES:
  * The LLM acts as a frontend engineer editing a live project.
  */
 export function buildIterateSystemPrompt(
-  projectName: string,
+  plan: ProjectPlan,
   fileTree: string,
   devServerUrl: string | null,
   livePageContext?: string,
   fileContents?: string,
+  devServerLogs?: string,
 ): string {
+  const projectName = plan.name;
   const previewNote = devServerUrl
     ? `The development server is running at ${devServerUrl}.`
     : "The development server is not currently running.";
@@ -498,9 +619,53 @@ ${fileContents}
 --- END SOURCE FILES ---\n`
     : "";
 
+  const logsSection = devServerLogs
+    ? `\n--- DEV SERVER TERMINAL OUTPUT (compilation errors & warnings) ---
+${devServerLogs}
+--- END DEV SERVER OUTPUT ---\n`
+    : "";
+
+  const featureList = plan.features.length
+    ? plan.features.map((f) => `  - ${f.title}: ${f.description}`).join("\n")
+    : "  (none)";
+  const pageList = plan.pages.length
+    ? plan.pages
+        .map((p) => `  - ${p.name} (${p.route}): ${p.description}`)
+        .join("\n")
+    : "  (none)";
+  const modelList = plan.dataModels.length
+    ? plan.dataModels
+        .map(
+          (m) =>
+            `  - ${m.name}: ` +
+            m.fields.map((f) => `${f.name}:${f.type}`).join(", "),
+        )
+        .join("\n")
+    : "  (none)";
+  const stackList = plan.stack.selected.join(", ") || "(default)";
+
+  const projectSummary = `
+--- PROJECT PLAN (what this app is supposed to do) ---
+Name: ${plan.name}
+Description: ${plan.description}
+Auth: ${plan.authStrategy}
+Stack: ${stackList}
+
+Features:
+${featureList}
+
+Pages:
+${pageList}
+
+Data models:
+${modelList}
+--- END PROJECT PLAN ---\n`;
+
   return `You are an expert frontend engineer iterating on a live Next.js project called "${projectName}".
 ${previewNote}
+${projectSummary}
 ${browserSection}
+${logsSection}
 Project file tree:
 ${fileTree}
 ${fileContentsSection}

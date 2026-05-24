@@ -1,8 +1,20 @@
 import { spawn, type ChildProcess } from "child_process";
 import { createServer } from "net";
 
-type ServerEntry = { process: ChildProcess; pid: number; port: number };
+const LOG_RING_SIZE = 300; // max lines kept per project
+
+type ServerEntry = {
+  process: ChildProcess;
+  pid: number;
+  port: number;
+  logs: string[]; // ring buffer of recent stdout+stderr lines
+};
 const servers = new Map<string, ServerEntry>();
+
+/** Return the most-recent dev-server output lines for a project (read-only copy). */
+export function getDevServerLogs(projectPath: string): string[] {
+  return servers.get(projectPath)?.logs.slice() ?? [];
+}
 
 function findFreePort(startPort = 3001): Promise<number> {
   return new Promise((resolve) => {
@@ -46,11 +58,28 @@ export async function startDevServer(
     cwd: projectPath,
     shell: true,
     detached: false,
-    // "ignore" prevents stdout/stderr pipe buffers from blocking the child process
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
-  servers.set(projectPath, { process: proc, pid: proc.pid ?? -1, port });
+  const entry: ServerEntry = {
+    process: proc,
+    pid: proc.pid ?? -1,
+    port,
+    logs: [],
+  };
+  servers.set(projectPath, entry);
+
+  function pushLines(raw: Buffer | string) {
+    const text = typeof raw === "string" ? raw : raw.toString("utf8");
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      entry.logs.push(line);
+      if (entry.logs.length > LOG_RING_SIZE) entry.logs.shift();
+    }
+  }
+
+  proc.stdout?.on("data", pushLines);
+  proc.stderr?.on("data", pushLines);
   proc.on("close", () => servers.delete(projectPath));
 
   // Wait until the server actually responds before returning

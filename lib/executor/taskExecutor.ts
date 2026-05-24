@@ -36,6 +36,33 @@ import {
 import { validateOutput } from "./validator";
 import { writeFile } from "@/lib/fs/writer";
 import { enforceLatestVersions } from "@/lib/versioning";
+
+/**
+ * Ensures tsconfig.json always contains the @/* path alias required for Next.js
+ * App Router imports. Merges into whatever the LLM generated rather than
+ * replacing it entirely, so any other compiler options the LLM added are kept.
+ */
+function patchTsConfig(raw: string): string {
+  try {
+    const config = JSON.parse(raw) as Record<string, unknown>;
+    const compilerOptions = (config.compilerOptions ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const paths = (compilerOptions.paths ?? {}) as Record<string, string[]>;
+    if (!paths["@/*"] || !paths["@/*"].includes("./*")) {
+      paths["@/*"] = ["./*"];
+    }
+    if (!compilerOptions.baseUrl) {
+      compilerOptions.baseUrl = ".";
+    }
+    compilerOptions.paths = paths;
+    config.compilerOptions = compilerOptions;
+    return JSON.stringify(config, null, 2);
+  } catch {
+    return raw; // not valid JSON — let the validator reject it
+  }
+}
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useFsStore } from "@/stores/fsStore";
@@ -259,7 +286,9 @@ export async function executeAll(
       const outputToWrite =
         task.filePath === "package.json"
           ? enforceLatestVersions(fullOutput)
-          : fullOutput;
+          : task.filePath === "tsconfig.json"
+            ? patchTsConfig(fullOutput)
+            : fullOutput;
       await writeFile(projectPath, task.filePath, outputToWrite);
 
       // 4b. Isolated TypeScript type-check on the just-written file.
@@ -363,6 +392,36 @@ export async function executeAll(
           { id: "npm-install" },
         );
       }
+
+      // ── Stack-specific setup (shadcn init, etc.) ────────────────────────
+      // Runs after npm install so CLI tools (npx shadcn) have access to the
+      // installed node_modules. Non-fatal: a warning is shown on failure.
+      const stackSelected =
+        useProjectPlanStore.getState().plan?.stack.selected ?? [];
+      if (stackSelected.length > 0) {
+        notify.loading("Running stack setup…", { id: "stack-setup" });
+        try {
+          const setupResp = await fetch("/api/setup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectPath, stack: stackSelected }),
+          });
+          if (setupResp.ok) {
+            notify.success("Stack setup complete.", { id: "stack-setup" });
+          } else {
+            const d = (await setupResp.json()) as { error?: string };
+            notify.warning(
+              `Stack setup warning: ${d.error ?? "unknown error"}`,
+              { id: "stack-setup" },
+            );
+          }
+        } catch {
+          notify.warning(
+            "Stack setup could not run — some components may be missing.",
+            { id: "stack-setup" },
+          );
+        }
+      }
     }
   }
 
@@ -429,10 +488,6 @@ export async function executeAll(
           { line: number; col: number; message: string }[]
         >();
         for (const err of tcData.errors) {
-          // Normalize to forward-slash relative path for task lookup
-          const rel = err.file
-            .replace(/\\/g, "/")
-            .replace(/^.*?([^/]+\/[^/]+)$/, "$1");
           const taskFilePath = Object.keys(allProjectFiles).find((p) =>
             err.file.replace(/\\/g, "/").endsWith(p.replace(/\\/g, "/")),
           );
@@ -518,11 +573,30 @@ export async function executeAll(
   }
 
   // ── Phase 3: next build verification + repair loop ────────────────────────
-  // Run `next build` up to 3 times. If it fails, identify the files with
-  // errors, re-generate those specific files with the build error as context,
-  // then rebuild. This guarantees the final project is error-free.
-  const MAX_BUILD_PASSES = 3;
+  // Run `next build` up to MAX_BUILD_PASSES times. On each failure:
+  //  a) Group errors by file.
+  //  b) Re-generate each errored file with build-error context — whether it
+  //     came from the task store (LLM-generated) OR from disk (e.g. shadcn
+  //     components that were installed by the setup phase).
+  //  c) Re-run npm install if package.json changed.
+  //  d) Repeat until the build passes or passes are exhausted.
+  const MAX_BUILD_PASSES = 5;
   let buildPassed = false;
+
+  // Helper: read a file from the generated project via the fs API
+  async function readProjectFile(relPath: string): Promise<string> {
+    try {
+      const url =
+        `/api/fs/read-file?projectPath=${encodeURIComponent(projectPath)}` +
+        `&filePath=${encodeURIComponent(relPath)}`;
+      const r = await fetch(url);
+      if (!r.ok) return "";
+      const d = (await r.json()) as { content?: string };
+      return d.content ?? "";
+    } catch {
+      return "";
+    }
+  }
 
   for (let pass = 0; pass < MAX_BUILD_PASSES; pass++) {
     notify.loading(
@@ -563,7 +637,6 @@ export async function executeAll(
     }
 
     if (pass === MAX_BUILD_PASSES - 1) {
-      // All repair passes exhausted
       notify.warning(
         "Build still has errors after repairs — check the output folder manually",
         { id: "build-verify" },
@@ -572,7 +645,6 @@ export async function executeAll(
     }
 
     if (buildErrors.length === 0) {
-      // Build failed but no structured errors parsed — stop trying
       notify.warning(
         "Build failed — could not identify specific errors. Check the output folder.",
         { id: "build-verify" },
@@ -580,40 +652,67 @@ export async function executeAll(
       break;
     }
 
-    // Collect all project file outputs for context in the fix prompt
+    // Collect all project file outputs for context in the fix prompt.
+    // Seed from task store first (always available), then disk files will be
+    // fetched on-demand for files not in the task store.
     const allProjectFiles: Record<string, string> = {};
     for (const t of useTaskStore.getState().tasks) {
       if (t.output) allProjectFiles[t.filePath] = t.output;
     }
 
-    // For each errored file, find the owning task and re-generate it
     const affectedFilePaths = [...new Set(buildErrors.map((e) => e.file))];
     let repairedAny = false;
 
     for (const erroredFile of affectedFilePaths) {
-      const erroredTask = useTaskStore
-        .getState()
-        .tasks.find((t) => t.filePath === erroredFile);
-      if (!erroredTask) continue;
-
       const fileErrors = buildErrors.filter((e) => e.file === erroredFile);
 
-      // Build dep contents for this task
-      const repairDeps: Record<string, string> = {};
-      for (const depId of erroredTask.dependsOn) {
-        const dep = useTaskStore.getState().tasks.find((t) => t.id === depId);
-        if (dep?.output) repairDeps[dep.filePath] = dep.output;
+      // Prefer the task-store entry (has dependency graph + cached output).
+      // Fall back to reading the file from disk for shadcn/init-installed files.
+      const storeTask = useTaskStore
+        .getState()
+        .tasks.find((t) => t.filePath === erroredFile);
+
+      let currentContent: string;
+      let repairDeps: Record<string, string> = {};
+      let taskForPrompt: Task;
+
+      if (storeTask) {
+        currentContent = storeTask.output ?? "";
+        for (const depId of storeTask.dependsOn) {
+          const dep = useTaskStore.getState().tasks.find((t) => t.id === depId);
+          if (dep?.output) repairDeps[dep.filePath] = dep.output;
+        }
+        taskForPrompt = storeTask;
+      } else {
+        // File not in task store — probably installed by shadcn/prisma/etc.
+        // Read it from disk so we can still fix it.
+        currentContent = await readProjectFile(erroredFile);
+        if (!currentContent) continue; // can't read — skip
+
+        // Create a minimal synthetic task so buildBuildFixPrompt has a shape to use
+        taskForPrompt = {
+          id: `fix-${erroredFile}`,
+          title: `Fix ${erroredFile}`,
+          filePath: erroredFile,
+          instruction:
+            "Fix the build errors listed below. Preserve all existing functionality and exports.",
+          dependsOn: [],
+          docsContext: "",
+          status: "running" as const,
+          retryCount: 0,
+        };
+        repairDeps = {};
+        // Add disk content to the context map for this pass
+        allProjectFiles[erroredFile] = currentContent;
       }
 
-      useTaskStore.getState().setActiveTask(erroredTask.id);
-      useTaskStore.getState().updateTaskStatus(erroredTask.id, "running");
       useTaskStore.getState().clearStream();
 
       const fixPrompt = buildBuildFixPrompt(
-        erroredTask,
+        taskForPrompt,
         repairDeps,
         fileErrors,
-        erroredTask.output ?? "",
+        currentContent,
         allProjectFiles,
       );
 
@@ -637,18 +736,25 @@ export async function executeAll(
         TASK_THINKING_BUDGET,
       );
 
-      const { valid: fixValid } = validateOutput(
-        erroredTask.filePath,
-        fixedOutput,
-      );
+      const { valid: fixValid } = validateOutput(erroredFile, fixedOutput);
       if (fixValid) {
         const toWrite =
-          erroredTask.filePath === "package.json"
+          erroredFile === "package.json"
             ? enforceLatestVersions(fixedOutput)
-            : fixedOutput;
-        await writeFile(projectPath, erroredTask.filePath, toWrite);
-        useTaskStore.getState().setTaskOutput(erroredTask.id, toWrite);
-        useTaskStore.getState().updateTaskStatus(erroredTask.id, "done");
+            : erroredFile === "tsconfig.json"
+              ? patchTsConfig(fixedOutput)
+              : fixedOutput;
+        await writeFile(projectPath, erroredFile, toWrite);
+        // Update task store if this was a known task
+        const knownTask = useTaskStore
+          .getState()
+          .tasks.find((t) => t.filePath === erroredFile);
+        if (knownTask) {
+          useTaskStore.getState().setTaskOutput(knownTask.id, toWrite);
+          useTaskStore.getState().updateTaskStatus(knownTask.id, "done");
+        }
+        // Keep context map fresh for subsequent files in this pass
+        allProjectFiles[erroredFile] = toWrite;
         repairedAny = true;
       }
 
@@ -659,14 +765,12 @@ export async function executeAll(
     if (!repairedAny) {
       notify.warning(
         "Build errors could not be auto-fixed — check the output folder",
-        {
-          id: "build-verify",
-        },
+        { id: "build-verify" },
       );
       break;
     }
 
-    // After repairs, run npm install again in case package.json changed
+    // After repairs, re-run npm install in case package.json changed
     try {
       await fetch("/api/install", {
         method: "POST",
@@ -812,7 +916,9 @@ export async function executeSingleTask(
       const outputToWrite =
         task.filePath === "package.json"
           ? enforceLatestVersions(fullOutput)
-          : fullOutput;
+          : task.filePath === "tsconfig.json"
+            ? patchTsConfig(fullOutput)
+            : fullOutput;
       await writeFile(projectPath, task.filePath, outputToWrite);
       useTaskStore.getState().setTaskOutput(task.id, outputToWrite);
       useTaskStore.getState().updateTaskStatus(task.id, "done");

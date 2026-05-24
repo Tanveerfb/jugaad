@@ -102,7 +102,9 @@ export default function NotificationsPage() {
             >
               {typeIcon(n.type)}
               <div className="flex-1 min-w-0">
-                <p className="text-sm leading-snug break-words">{n.message}</p>
+                <p className="text-sm leading-snug wrap-break-word">
+                  {n.message}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {typeLabel(n.type)} &middot; {formatTime(n.timestamp)}
                 </p>
