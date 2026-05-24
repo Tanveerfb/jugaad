@@ -331,11 +331,7 @@ export default function NewProjectPage() {
                     </span>
                   </div>
                   {/* Stream output */}
-                  <div
-                    ref={streamScrollRef}
-                    onScroll={handleStreamScroll}
-                    className="bg-[#1e1e1e] max-h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed"
-                  >
+                  <div className="bg-[#1e1e1e] max-h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
                     {genStream ? (
                       <pre className="text-green-400 whitespace-pre-wrap break-all">
                         {genStream}
