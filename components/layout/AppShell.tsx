@@ -5,7 +5,7 @@ import Link from "next/link";
 import ProviderBadge from "@/components/shared/ProviderBadge";
 import ModelSwitcher from "@/components/shared/ModelSwitcher";
 import GitHubExportModal from "@/components/export/GitHubExportModal";
-import { Settings, Download, GitBranch, Loader2 } from "lucide-react";
+import { Settings, Download, GitBranch, Loader2, Bell } from "lucide-react";
 import appConfig from "@/app.config";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,31 @@ import { useFsStore } from "@/stores/fsStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useAuthStore } from "@/stores/authStore";
 import { signOut } from "@/lib/firebase/authHelpers";
-import { toast } from "sonner";
+import { useNotificationStore } from "@/stores/notificationStore";
+
+import { notify } from "@/lib/notify";
+
+function NotificationBell() {
+  const notifications = useNotificationStore((s) => s.notifications);
+  const lastSeenAt = useNotificationStore((s) => s.lastSeenAt);
+  const unread = notifications.filter((n) => n.timestamp > lastSeenAt).length;
+
+  return (
+    <Link
+      href="/notifications"
+      className={cn(
+        buttonVariants({ variant: "ghost", size: "icon" }),
+        "relative",
+      )}
+      title="Notification log"
+    >
+      <Bell className="h-4 w-4" />
+      {unread > 0 && (
+        <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
+      )}
+    </Link>
+  );
+}
 
 function TopBar() {
   const projectPath = useFsStore((s) => s.activeProjectPath ?? s.projectPath);
@@ -35,7 +59,7 @@ function TopBar() {
 
   async function handleSignOut() {
     await signOut();
-    toast.success("Signed out");
+    notify.success("Signed out");
   }
 
   return (
@@ -109,6 +133,7 @@ function TopBar() {
             </div>
           )}
 
+          <NotificationBell />
           <Link
             href="/settings"
             className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}

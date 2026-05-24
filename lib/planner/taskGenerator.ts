@@ -59,6 +59,7 @@ export async function generateTasks(
   plan: ProjectPlan,
   config: LLMConfig,
   onProgress: (status: string) => void,
+  onChunk?: (chunk: string) => void,
 ): Promise<Task[]> {
   // Step 1: Fetch docs
   onProgress("Fetching documentation...");
@@ -87,6 +88,7 @@ export async function generateTasks(
     config,
     (chunk) => {
       fullResponse += chunk;
+      onChunk?.(chunk);
     },
     TASK_GEN_MAX_TOKENS,
   );

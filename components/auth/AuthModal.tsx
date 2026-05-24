@@ -6,7 +6,7 @@ import {
   signInAnonymously,
 } from "@/lib/firebase/authHelpers";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { X, Loader2 } from "lucide-react";
 import BrandLogo from "@/components/shared/BrandLogo";
 import appConfig from "@/app.config";
@@ -32,7 +32,7 @@ export default function AuthModal({
     setLoading("google");
     try {
       await signInWithGoogle();
-      toast.success("Welcome to " + appConfig.name);
+      notify.success("Welcome to " + appConfig.name);
       onClose();
     } catch (err) {
       setError((err as Error).message);
@@ -46,7 +46,7 @@ export default function AuthModal({
     setLoading("guest");
     try {
       await signInAnonymously();
-      toast.success("Welcome to " + appConfig.name);
+      notify.success("Welcome to " + appConfig.name);
       onClose();
     } catch (err) {
       setError((err as Error).message);

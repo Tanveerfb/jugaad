@@ -24,7 +24,7 @@ import { sendMessage } from "@/lib/planner/planAgent";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { ConversationMessage } from "@/types";
 
 export default function NewProjectPage() {
@@ -33,7 +33,7 @@ export default function NewProjectPage() {
   const [stackOpen, setStackOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [genStream, setGenStream] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -52,7 +52,6 @@ export default function NewProjectPage() {
   const setAutoRun = useProjectPlanStore((s) => s.setAutoRun);
   const isGenerating = useProjectPlanStore((s) => s.isGenerating);
   const status = useProjectPlanStore((s) => s.generatingStatus);
-  const generatingStartTime = useProjectPlanStore((s) => s.generatingStartTime);
   const startGenerating = useProjectPlanStore((s) => s.startGenerating);
   const setGeneratingStatus = useProjectPlanStore((s) => s.setGeneratingStatus);
   const stopGenerating = useProjectPlanStore((s) => s.stopGenerating);
@@ -61,35 +60,6 @@ export default function NewProjectPage() {
 
   const isEmpty = conversation.length === 0 && !plan;
   const isBusy = isPlanning || isGenerating;
-
-  const GENERATE_STEPS = [
-    "Fetching docs",
-    "Building prompt",
-    "Generating tasks",
-  ];
-  const generateStepIndex = status.includes("Fetching")
-    ? 0
-    : status.includes("Building")
-      ? 1
-      : status.includes("Generating")
-        ? 2
-        : 0;
-  const generateProgress = status.includes("Fetching")
-    ? 18
-    : status.includes("Building")
-      ? 52
-      : status.includes("Generating")
-        ? 80
-        : 5;
-  // ~120s generous budget; counts down once generation begins
-  const ESTIMATED_DURATION = 120;
-  const timeRemaining = Math.max(0, ESTIMATED_DURATION - elapsedSeconds);
-  const timeLabel =
-    timeRemaining > 10
-      ? `~${timeRemaining}s remaining`
-      : timeRemaining > 0
-        ? "almost done…"
-        : "wrapping up…";
 
   // Reset plan state when entering new-project page
   useEffect(() => {
@@ -100,16 +70,6 @@ export default function NewProjectPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation, streamingContent, isGenerating]);
-
-  // Elapsed-time counter — reads persisted generatingStartTime so it survives reloads
-  useEffect(() => {
-    if (!isGenerating || !generatingStartTime) return;
-    const tick = () =>
-      setElapsedSeconds(Math.floor((Date.now() - generatingStartTime) / 1000));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [isGenerating, generatingStartTime]);
 
   // Auto-resize textarea — no hard cap so it never needs a scrollbar.
   // The container is capped via CSS max-h; overflow-hidden on the textarea
@@ -158,7 +118,7 @@ export default function NewProjectPage() {
         content: `⚠️ The response was interrupted — ${errMsg}.\n\nYou can try again or use **Start over** to clear the conversation.`,
         timestamp: Date.now(),
       });
-      toast.error("Stream interrupted. Try again.");
+      notify.error("Stream interrupted. Try again.");
     } finally {
       setStreamingContent("");
       setIsPlanning(false);
@@ -167,15 +127,21 @@ export default function NewProjectPage() {
 
   async function handleConfirm() {
     if (!plan) return;
+    setGenStream("");
     startGenerating();
     try {
-      const tasks = await generateTasks(plan, llmConfig, setGeneratingStatus);
+      const tasks = await generateTasks(
+        plan,
+        llmConfig,
+        setGeneratingStatus,
+        (chunk) => setGenStream((prev) => prev + chunk),
+      );
       setTasks(tasks, plan.id);
       confirmPlan();
-      toast.success(`Generated ${tasks.length} tasks`);
+      notify.success(`Generated ${tasks.length} tasks`);
       router.push(`/studio/${plan.id}`);
     } catch (err) {
-      toast.error(`Failed to generate tasks: ${(err as Error).message}`);
+      notify.error(`Failed to generate tasks: ${(err as Error).message}`);
     } finally {
       stopGenerating();
     }
@@ -308,7 +274,7 @@ export default function NewProjectPage() {
             )}
           </AnimatePresence>
 
-          {/* Generating tasks progress */}
+          {/* Generating tasks — live AI stream */}
           <AnimatePresence>
             {isGenerating && (
               <motion.div
@@ -319,55 +285,25 @@ export default function NewProjectPage() {
                 transition={{ duration: 0.25, ease: "easeOut" }}
                 className="pb-6"
               >
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-                  {/* Header row */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                      <span className="text-sm font-medium">
-                        Preparing your project…
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
-                      <span>{timeLabel}</span>
-                      <span className="opacity-40">·</span>
-                      <span>
-                        {generateStepIndex + 1}/{GENERATE_STEPS.length}
-                      </span>
-                    </div>
+                <div className="rounded-xl border border-border overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center gap-2.5 px-3 py-2 border-b border-border bg-muted/20">
+                    <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                    <span className="text-xs font-mono text-muted-foreground truncate">
+                      {status || "Preparing your project\u2026"}
+                    </span>
                   </div>
-
-                  {/* Progress bar */}
-                  <div className="h-1 rounded-full bg-primary/15 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-primary"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${generateProgress}%` }}
-                      transition={{ duration: 0.5, ease: "easeInOut" }}
-                    />
-                  </div>
-
-                  {/* Step labels */}
-                  <div className="flex items-center gap-0">
-                    {GENERATE_STEPS.map((step, i) => {
-                      const done = i < generateStepIndex;
-                      const active = i === generateStepIndex;
-                      return (
-                        <div
-                          key={step}
-                          className={cn(
-                            "flex-1 text-center text-xs transition-colors",
-                            done
-                              ? "text-primary/60"
-                              : active
-                                ? "text-foreground font-medium"
-                                : "text-muted-foreground/40",
-                          )}
-                        >
-                          {step}
-                        </div>
-                      );
-                    })}
+                  {/* Stream output */}
+                  <div className="bg-[#1e1e1e] max-h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
+                    {genStream ? (
+                      <pre className="text-green-400 whitespace-pre-wrap break-all">
+                        {genStream}
+                      </pre>
+                    ) : (
+                      <span className="text-muted-foreground/50 italic">
+                        Waiting for LLM\u2026
+                      </span>
+                    )}
                   </div>
                 </div>
               </motion.div>

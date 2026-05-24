@@ -39,7 +39,7 @@ import { enforceLatestVersions } from "@/lib/versioning";
 import { useTaskStore } from "@/stores/taskStore";
 import { useProjectPlanStore } from "@/stores/projectPlanStore";
 import { useFsStore } from "@/stores/fsStore";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { LLMConfig, Task } from "@/types";
 
 export async function executeAll(
@@ -109,7 +109,7 @@ export async function executeAll(
         useTaskStore.getState().setTaskError(task.id, msg);
         useTaskStore.getState().updateTaskStatus(task.id, "error");
         useTaskStore.getState().setIsExecuting(false);
-        toast.error(`Task failed: ${task.title} — dependency not complete`);
+        notify.error(`Task failed: ${task.title} — dependency not complete`);
         return;
       }
     }
@@ -207,7 +207,7 @@ export async function executeAll(
         useTaskStore.getState().clearStream();
         useTaskStore.getState().setActiveTask(null);
         useTaskStore.getState().setIsExecuting(false);
-        toast.error(`Task failed: ${task.title} — ${lastError}`);
+        notify.error(`Task failed: ${task.title} — ${lastError}`);
         return;
       }
 
@@ -230,7 +230,7 @@ export async function executeAll(
         useTaskStore.getState().clearStream();
         useTaskStore.getState().setActiveTask(null);
         if (task.isSystem) {
-          toast.warning(
+          notify.warning(
             `${task.title} failed — run npm install manually in the output folder`,
           );
         } else {
@@ -241,12 +241,12 @@ export async function executeAll(
             useTaskStore.getState().insertTasksAfter(task.id, split);
             useTaskStore.getState().markAsSplit(task.id);
             wasSplit = true;
-            toast.info(
+            notify.info(
               `"${task.title}" was auto-split into ${split.length} smaller tasks`,
             );
           } else {
             useTaskStore.getState().setIsExecuting(false);
-            toast.error(
+            notify.error(
               `Task failed: ${task.title} — fix required before continuing`,
             );
             return;
@@ -305,12 +305,12 @@ export async function executeAll(
                 useTaskStore.getState().insertTasksAfter(task.id, split);
                 useTaskStore.getState().markAsSplit(task.id);
                 wasSplit = true;
-                toast.info(
+                notify.info(
                   `"${task.title}" was auto-split into ${split.length} smaller tasks`,
                 );
               } else {
                 useTaskStore.getState().setIsExecuting(false);
-                toast.error(
+                notify.error(
                   `Task failed: ${task.title} — TypeScript errors could not be resolved`,
                 );
                 return;
@@ -341,7 +341,7 @@ export async function executeAll(
     // LLM task operates against the real installed package tree / type defs.
     if (task.filePath === "package.json" && !npmInstallDone) {
       npmInstallDone = true;
-      toast.loading("Installing dependencies…", { id: "npm-install" });
+      notify.loading("Installing dependencies…", { id: "npm-install" });
       try {
         const resp = await fetch("/api/install", {
           method: "POST",
@@ -349,16 +349,16 @@ export async function executeAll(
           body: JSON.stringify({ projectPath }),
         });
         if (resp.ok) {
-          toast.success("Dependencies installed!", { id: "npm-install" });
+          notify.success("Dependencies installed!", { id: "npm-install" });
         } else {
           const data = (await resp.json()) as { error?: string };
-          toast.warning(
+          notify.warning(
             `npm install failed: ${data.error ?? "unknown error"} — run it manually`,
             { id: "npm-install" },
           );
         }
       } catch {
-        toast.warning(
+        notify.warning(
           "Could not run npm install — run it manually in the output folder",
           { id: "npm-install" },
         );
@@ -372,23 +372,23 @@ export async function executeAll(
   // ── Fallback npm install (if package.json was never generated) ────────────
   if (!npmInstallDone) {
     try {
-      toast.loading("Installing dependencies…", { id: "npm-install" });
+      notify.loading("Installing dependencies…", { id: "npm-install" });
       const resp = await fetch("/api/install", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectPath }),
       });
       if (resp.ok) {
-        toast.success("Dependencies installed!", { id: "npm-install" });
+        notify.success("Dependencies installed!", { id: "npm-install" });
       } else {
         const data = (await resp.json()) as { error?: string };
-        toast.warning(
+        notify.warning(
           `npm install failed: ${data.error ?? "unknown error"} — run it manually`,
           { id: "npm-install" },
         );
       }
     } catch {
-      toast.warning(
+      notify.warning(
         "Could not run npm install — run it manually in the output folder",
         { id: "npm-install" },
       );
@@ -401,7 +401,7 @@ export async function executeAll(
   // misses: wrong string literal values, non-exported symbols, prop mismatches.
   // Errors are grouped by file and each errored file is re-generated once with
   // the full project context before proceeding to next build.
-  toast.loading("Type-checking project…", { id: "tsc-check" });
+  notify.loading("Type-checking project…", { id: "tsc-check" });
   try {
     const tcResp = await fetch("/api/typecheck", {
       method: "POST",
@@ -414,7 +414,7 @@ export async function executeAll(
       };
 
       if (tcData.errors.length > 0) {
-        toast.loading(`Fixing ${tcData.errors.length} type error(s)…`, {
+        notify.loading(`Fixing ${tcData.errors.length} type error(s)…`, {
           id: "tsc-check",
         });
 
@@ -507,14 +507,14 @@ export async function executeAll(
           useTaskStore.getState().setActiveTask(null);
         }
 
-        toast.success("Type errors repaired.", { id: "tsc-check" });
+        notify.success("Type errors repaired.", { id: "tsc-check" });
       } else {
-        toast.success("Type check passed.", { id: "tsc-check" });
+        notify.success("Type check passed.", { id: "tsc-check" });
       }
     }
   } catch {
     // Non-fatal — proceed to next build which will surface any remaining errors
-    toast.dismiss("tsc-check");
+    notify.dismiss("tsc-check");
   }
 
   // ── Phase 3: next build verification + repair loop ────────────────────────
@@ -525,7 +525,7 @@ export async function executeAll(
   let buildPassed = false;
 
   for (let pass = 0; pass < MAX_BUILD_PASSES; pass++) {
-    toast.loading(
+    notify.loading(
       pass === 0
         ? "Verifying build…"
         : `Repair pass ${pass}/${MAX_BUILD_PASSES - 1} — rebuilding…`,
@@ -548,14 +548,14 @@ export async function executeAll(
       buildSuccess = buildData.success;
       buildErrors = buildData.errors ?? [];
     } catch {
-      toast.warning("Build check unavailable — project may still work", {
+      notify.warning("Build check unavailable — project may still work", {
         id: "build-verify",
       });
       break;
     }
 
     if (buildSuccess) {
-      toast.success("Build verified — project is ready!", {
+      notify.success("Build verified — project is ready!", {
         id: "build-verify",
       });
       buildPassed = true;
@@ -564,7 +564,7 @@ export async function executeAll(
 
     if (pass === MAX_BUILD_PASSES - 1) {
       // All repair passes exhausted
-      toast.warning(
+      notify.warning(
         "Build still has errors after repairs — check the output folder manually",
         { id: "build-verify" },
       );
@@ -573,7 +573,7 @@ export async function executeAll(
 
     if (buildErrors.length === 0) {
       // Build failed but no structured errors parsed — stop trying
-      toast.warning(
+      notify.warning(
         "Build failed — could not identify specific errors. Check the output folder.",
         { id: "build-verify" },
       );
@@ -657,7 +657,7 @@ export async function executeAll(
     }
 
     if (!repairedAny) {
-      toast.warning(
+      notify.warning(
         "Build errors could not be auto-fixed — check the output folder",
         {
           id: "build-verify",
@@ -679,9 +679,9 @@ export async function executeAll(
   }
 
   if (buildPassed) {
-    toast.success("Project built successfully and verified! 🎉");
+    notify.success("Project built successfully and verified! 🎉");
   } else {
-    toast.success(
+    notify.success(
       "Project files generated — review build output for any remaining issues.",
     );
   }
@@ -697,7 +697,7 @@ async function tryModularize(
   depContents: Record<string, string>,
   config: LLMConfig,
 ): Promise<Task[]> {
-  toast.loading(`Auto-splitting "${task.title}"…`, { id: "modularize" });
+  notify.loading(`Auto-splitting "${task.title}"…`, { id: "modularize" });
   let rawOutput = "";
   try {
     await streamChat(
@@ -718,14 +718,14 @@ async function tryModularize(
       TASK_THINKING_BUDGET,
     );
   } catch {
-    toast.dismiss("modularize");
+    notify.dismiss("modularize");
     return [];
   }
 
   // Extract JSON from <subtasks>…</subtasks>
   const match = rawOutput.match(/<subtasks>([\s\S]*?)<\/subtasks>/);
   if (!match) {
-    toast.dismiss("modularize");
+    notify.dismiss("modularize");
     return [];
   }
 
@@ -749,10 +749,10 @@ async function tryModularize(
       retryCount: 0,
     }));
 
-    toast.dismiss("modularize");
+    notify.dismiss("modularize");
     return subTasks;
   } catch {
-    toast.dismiss("modularize");
+    notify.dismiss("modularize");
     return [];
   }
 }
@@ -829,7 +829,7 @@ export async function executeSingleTask(
     } else {
       useTaskStore.getState().setTaskError(task.id, lastError);
       useTaskStore.getState().updateTaskStatus(task.id, "error");
-      toast.error(`Task failed: ${task.title}`);
+      notify.error(`Task failed: ${task.title}`);
     }
   }
 
@@ -837,5 +837,5 @@ export async function executeSingleTask(
   useTaskStore.getState().setActiveTask(null);
   useTaskStore.getState().setIsExecuting(false);
 
-  if (succeeded) toast.success(`Task completed: ${task.title}`);
+  if (succeeded) notify.success(`Task completed: ${task.title}`);
 }

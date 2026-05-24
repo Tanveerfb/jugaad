@@ -21,7 +21,7 @@ import {
   Loader2,
   LayoutList,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import FolderPicker from "@/components/filesystem/FolderPicker";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -109,7 +109,7 @@ export default function ProjectPage() {
 
   async function handleStart() {
     if (!projectPath) {
-      toast.error("Select an output folder first.");
+      notify.error("Select an output folder first.");
       return;
     }
     const effectivePath = getProjectOutputPath(
@@ -119,7 +119,7 @@ export default function ProjectPage() {
     try {
       await executeAll(tasks.tasks, effectivePath, llmConfig);
     } catch (err) {
-      toast.error((err as Error).message);
+      notify.error((err as Error).message);
     }
   }
 
@@ -135,12 +135,12 @@ export default function ProjectPage() {
         setFixStatus,
       );
       if (result.fixed) {
-        toast.success("All TypeScript errors fixed!");
+        notify.success("All TypeScript errors fixed!");
       } else {
-        toast.warning(`${result.remaining} error(s) could not be auto-fixed.`);
+        notify.warning(`${result.remaining} error(s) could not be auto-fixed.`);
       }
     } catch (err) {
-      toast.error((err as Error).message);
+      notify.error((err as Error).message);
     } finally {
       setIsFixing(false);
       setFixStatus("");

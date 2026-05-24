@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -26,7 +26,7 @@ import {
   Globe,
 } from "lucide-react";
 import type { ConversationMessage, Task } from "@/types";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 type Tab = "iterate" | "add-features";
@@ -280,12 +280,12 @@ export default function IterateInterface() {
       let typecheckReport: string | null = null;
       if (edits.length > 0) {
         await applyEdits(edits);
-        toast.success(
-          `Applied ${edits.length} file edit${edits.length > 1 ? "s" : ""}. Dev server hot-reloadingâ€¦`,
+        notify.success(
+          `Applied ${edits.length} file edit${edits.length > 1 ? "s" : ""}. Dev server hot-reloading…`,
         );
         typecheckReport = await runTypechecks(edits);
         if (typecheckReport) {
-          toast.warning("TypeScript errors found in edited files.");
+          notify.warning("TypeScript errors found in edited files.");
         }
       }
 
@@ -301,7 +301,7 @@ export default function IterateInterface() {
         const errorMsg: ConversationMessage = {
           id: crypto.randomUUID(),
           role: "system",
-          content: `⚠️ **TypeScript errors found after applying edits. Please fix them:**\n\`\`\`\n${typecheckReport}\n\`\`\``,
+          content: `?? **TypeScript errors found after applying edits. Please fix them:**\n\`\`\`\n${typecheckReport}\n\`\`\``,
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMsg, errorMsg]);
@@ -309,7 +309,7 @@ export default function IterateInterface() {
         setMessages((prev) => [...prev, assistantMsg]);
       }
     } catch (err) {
-      toast.error((err as Error).message);
+      notify.error((err as Error).message);
     } finally {
       setStreaming("");
       setIsSending(false);
@@ -321,7 +321,7 @@ export default function IterateInterface() {
     if (!text || isGeneratingTasks || !plan) return;
     setPendingTasks([]);
     setIsGeneratingTasks(true);
-    setGenerationStatus("Generating task planâ€¦");
+    setGenerationStatus("Generating task plan…");
 
     try {
       const existingPaths = existingTasks.map((t) => t.filePath);
@@ -338,7 +338,7 @@ export default function IterateInterface() {
 
       const tasks = extractNewTasks(fullResponse);
       if (tasks.length === 0) {
-        toast.error("LLM did not return a valid task list. Try rephrasing.");
+        notify.error("LLM did not return a valid task list. Try rephrasing.");
         return;
       }
 
@@ -351,7 +351,7 @@ export default function IterateInterface() {
       setPendingTasks(normalised);
       setGenerationStatus("");
     } catch (err) {
-      toast.error((err as Error).message);
+      notify.error((err as Error).message);
       setGenerationStatus("");
     } finally {
       setIsGeneratingTasks(false);
@@ -361,7 +361,7 @@ export default function IterateInterface() {
   function handleAddToQueue() {
     if (pendingTasks.length === 0) return;
     appendTasks(pendingTasks);
-    toast.success(
+    notify.success(
       `${pendingTasks.length} task${pendingTasks.length !== 1 ? "s" : ""} added to build queue.`,
     );
     setPendingTasks([]);
@@ -391,7 +391,7 @@ export default function IterateInterface() {
           onClick={() => setShowPreview(true)}
           className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          Start Preview â†’
+          Start Preview →
         </button>
       )}
     </div>
@@ -475,7 +475,7 @@ export default function IterateInterface() {
                     void handleSend();
                   }
                 }}
-                placeholder="Ask for a changeâ€¦ (e.g. make the header sticky)"
+                placeholder="Ask for a change… (e.g. make the header sticky)"
                 rows={2}
                 disabled={isSending}
                 className="flex-1 resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
@@ -496,8 +496,8 @@ export default function IterateInterface() {
               <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                 <Globe className="h-3 w-3 shrink-0 text-green-500" />
                 {livePageContext
-                  ? "Live page context captured — AI can see the current rendered UI"
-                  : "Dev server running — page context will be captured on next message"}
+                  ? "Live page context captured � AI can see the current rendered UI"
+                  : "Dev server running � page context will be captured on next message"}
               </p>
             )}
           </div>
@@ -528,7 +528,7 @@ export default function IterateInterface() {
             {isGeneratingTasks ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {generationStatus || "Generatingâ€¦"}
+                {generationStatus || "Generating…"}
               </>
             ) : (
               <>

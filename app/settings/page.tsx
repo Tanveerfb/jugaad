@@ -11,7 +11,7 @@ import FolderBrowser from "@/components/filesystem/FolderBrowser";
 import { signOut } from "@/lib/firebase/authHelpers";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import {
   CheckCircle,
   XCircle,
@@ -46,14 +46,14 @@ export default function SettingsPage() {
         setStatus("ok");
         setAvailableModels(models);
         if (!silent)
-          toast.success(`Connected \u2014 ${models.length} model(s) found.`);
+          notify.success(`Connected \u2014 ${models.length} model(s) found.`);
       } catch (err) {
         setStatus("fail");
         const msg =
           err instanceof LLMConnectionError
             ? err.message
             : "Unexpected error. Check console.";
-        if (!silent) toast.error(msg);
+        if (!silent) notify.error(msg);
       }
     },
     [],
@@ -69,12 +69,12 @@ export default function SettingsPage() {
   function handleFolderSelect(path: string) {
     setProjectPath(path);
     setFolderBrowserOpen(false);
-    toast.success(`Folder set: ${path.split(/[\\/]/).filter(Boolean).pop()}`);
+    notify.success(`Folder set: ${path.split(/[\\/]/).filter(Boolean).pop()}`);
   }
 
   async function handleSignOut() {
     await signOut();
-    toast.success("Signed out");
+    notify.success("Signed out");
   }
 
   function handleClearData() {
@@ -84,7 +84,7 @@ export default function SettingsPage() {
     }
     localStorage.clear();
     sessionStorage.clear();
-    toast.success("All local data cleared. Reloading...");
+    notify.success("All local data cleared. Reloading...");
     setTimeout(() => window.location.reload(), 1200);
   }
 

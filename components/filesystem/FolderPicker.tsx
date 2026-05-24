@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FolderOpen } from "lucide-react";
 import FolderBrowser from "./FolderBrowser";
 import appConfig from "@/app.config";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 export default function FolderPicker() {
   const baseFolderName = useFsStore((s) => s.baseFolderName);
@@ -16,7 +16,7 @@ export default function FolderPicker() {
   function handleSelect(path: string) {
     setProjectPath(path);
     setOpen(false);
-    toast.success(
+    notify.success(
       `Output folder: ${path.split(/[\\/]/).filter(Boolean).pop()}`,
     );
   }
