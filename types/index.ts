@@ -5,7 +5,6 @@ export type LLMConfig = {
   baseUrl: string;
   model: string;
   temperature: number;
-  maxTokens: number;
 };
 
 export type StackOption = {

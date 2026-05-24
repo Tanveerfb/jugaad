@@ -1,7 +1,7 @@
 import type { StackOption } from "@/types";
 
 export const stackOptions: StackOption[] = [
-  // Always included (locked)
+  // ── Language Group A: Next.js + TypeScript (App Router, SSR, full-stack) ──
   {
     id: "nextjs",
     label: "Next.js",
@@ -19,6 +19,24 @@ export const stackOptions: StackOption[] = [
       "https://www.typescriptlang.org/docs/handbook/2/everyday-types.html",
     packageName: "typescript",
   },
+  // ── Language Group B: React.js + JavaScript (Vite SPA, client-only) ───────
+  {
+    id: "reactjs",
+    label: "React.js",
+    category: "language",
+    default: false,
+    docUrl: "https://react.dev/reference/react",
+    packageName: "react",
+  },
+  {
+    id: "javascript",
+    label: "JavaScript",
+    category: "language",
+    default: false,
+    docUrl: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference",
+    packageName: "",
+  },
+  // ── Styling (auto-enforced by language group, not user-toggled) ───────────
   {
     id: "tailwind",
     label: "Tailwind CSS v4",
@@ -27,7 +45,15 @@ export const stackOptions: StackOption[] = [
     docUrl: "https://tailwindcss.com/docs/installation",
     packageName: "tailwindcss",
   },
-  // Toggleable
+  {
+    id: "bootstrap",
+    label: "Bootstrap 5",
+    category: "styling",
+    default: false,
+    docUrl: "https://getbootstrap.com/docs/5.3/getting-started/introduction/",
+    packageName: "bootstrap",
+  },
+  // ── UI Components ─────────────────────────────────────────────────────────
   {
     id: "shadcn",
     label: "shadcn/ui",
@@ -37,29 +63,23 @@ export const stackOptions: StackOption[] = [
     packageName: "shadcn-ui",
   },
   {
-    id: "cossui",
-    label: "coss ui",
+    id: "mui",
+    label: "Material UI",
+    category: "ui",
+    default: true,
+    docUrl: "https://mui.com/material-ui/getting-started/",
+    packageName: "@mui/material",
+  },
+  {
+    id: "react-bootstrap",
+    label: "React Bootstrap",
     category: "ui",
     default: false,
-    docUrl: "https://coss.com/ui/docs/get-started.md",
-    packageName: "coss-ui",
+    docUrl:
+      "https://react-bootstrap.netlify.app/docs/getting-started/introduction",
+    packageName: "react-bootstrap",
   },
-  {
-    id: "prisma",
-    label: "Prisma ORM",
-    category: "database",
-    default: false,
-    docUrl: "https://www.prisma.io/docs/orm/reference/prisma-schema-reference",
-    packageName: "prisma",
-  },
-  {
-    id: "drizzle",
-    label: "Drizzle ORM",
-    category: "database",
-    default: false,
-    docUrl: "https://orm.drizzle.team/docs/overview",
-    packageName: "drizzle-orm",
-  },
+  // ── Database ──────────────────────────────────────────────────────────────
   {
     id: "firestore",
     label: "Cloud Firestore",
@@ -68,6 +88,7 @@ export const stackOptions: StackOption[] = [
     docUrl: "https://firebase.google.com/docs/firestore/quickstart",
     packageName: "firebase",
   },
+  // ── Auth ──────────────────────────────────────────────────────────────────
   {
     id: "nextauth",
     label: "NextAuth.js v5",
@@ -77,14 +98,6 @@ export const stackOptions: StackOption[] = [
     packageName: "next-auth",
   },
   {
-    id: "clerk",
-    label: "Clerk",
-    category: "auth",
-    default: false,
-    docUrl: "https://clerk.com/docs/quickstarts/nextjs",
-    packageName: "@clerk/nextjs",
-  },
-  {
     id: "firebase-auth",
     label: "Firebase Auth",
     category: "auth",
@@ -92,22 +105,7 @@ export const stackOptions: StackOption[] = [
     docUrl: "https://firebase.google.com/docs/auth/web/start",
     packageName: "firebase",
   },
-  {
-    id: "stripe",
-    label: "Stripe",
-    category: "utilities",
-    default: false,
-    docUrl: "https://docs.stripe.com/api",
-    packageName: "stripe",
-  },
-  {
-    id: "zod",
-    label: "Zod",
-    category: "utilities",
-    default: true,
-    docUrl: "https://zod.dev/?id=basic-usage",
-    packageName: "zod",
-  },
+  // ── Utilities ─────────────────────────────────────────────────────────────
   {
     id: "rhf",
     label: "React Hook Form",
@@ -120,7 +118,7 @@ export const stackOptions: StackOption[] = [
     id: "zustand",
     label: "Zustand",
     category: "utilities",
-    default: false,
+    default: true,
     docUrl: "https://docs.pmnd.rs/zustand/getting-started/introduction",
     packageName: "zustand",
   },
@@ -128,25 +126,9 @@ export const stackOptions: StackOption[] = [
     id: "framer",
     label: "Framer Motion",
     category: "utilities",
-    default: false,
+    default: true,
     docUrl: "https://motion.dev/docs/react-quick-start",
     packageName: "framer-motion",
-  },
-  {
-    id: "uploadthing",
-    label: "UploadThing",
-    category: "utilities",
-    default: false,
-    docUrl: "https://docs.uploadthing.com/getting-started/appdir",
-    packageName: "uploadthing",
-  },
-  {
-    id: "resend",
-    label: "Resend",
-    category: "utilities",
-    default: false,
-    docUrl: "https://resend.com/docs/send-with-nextjs",
-    packageName: "resend",
   },
   {
     id: "gemini",
@@ -158,8 +140,33 @@ export const stackOptions: StackOption[] = [
   },
 ];
 
-// Mutual exclusion groups
-export const DB_IDS = ["prisma", "drizzle", "firestore"];
-export const AUTH_IDS = ["nextauth", "clerk", "firebase-auth"];
-// Locked options that cannot be deselected
-export const LOCKED_IDS = ["nextjs", "typescript", "tailwind"];
+// ── Language groups ───────────────────────────────────────────────────────────
+/** IDs that make up the Next.js group (always selected together). */
+export const NEXTJS_GROUP = ["nextjs", "typescript"] as const;
+/** IDs that make up the React.js group (always selected together). */
+export const REACT_GROUP = ["reactjs", "javascript"] as const;
+
+/** Styling that is automatically enforced when the given language anchor is active. */
+export const STYLING_FOR: Record<string, string> = {
+  nextjs: "tailwind",
+  reactjs: "bootstrap",
+};
+
+/** Styling IDs — auto-managed, never manually toggleable. */
+export const STYLING_IDS = ["tailwind", "bootstrap"];
+
+/** IDs only available when the Next.js group is active. */
+export const NEXTJS_ONLY_IDS = ["shadcn", "nextauth"];
+
+/** IDs only available when the React.js group is active. */
+export const REACT_ONLY_IDS = ["react-bootstrap"];
+
+// ── Mutual exclusion ──────────────────────────────────────────────────────────
+export const DB_IDS = ["firestore"];
+export const AUTH_IDS = ["nextauth", "firebase-auth"];
+
+/**
+ * Legacy export — no hard-locked IDs anymore; language/styling are enforced
+ * through group-switching logic in StackSelector.
+ */
+export const LOCKED_IDS: string[] = [];

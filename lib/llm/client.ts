@@ -72,7 +72,7 @@ export async function streamChat(
         model: config.model,
         messages: messages.map(({ role, content }) => ({ role, content })),
         temperature: config.temperature,
-        max_tokens: maxTokensOverride ?? config.maxTokens,
+        max_tokens: maxTokensOverride ?? -1,
         stream: true,
         ...thinkingParams,
       }),

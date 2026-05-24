@@ -10,7 +10,7 @@ import { streamChat } from "@/lib/llm/client";
 /** Per-file token budget for the task executor. Set high enough to accommodate
  *  thinking-model reasoning tokens (e.g. qwen3.5-9b reasoning_content) before
  *  the actual file content is emitted. Model context window is 96k tokens. */
-const TASK_EXEC_MAX_TOKENS = 65_536;
+const TASK_EXEC_MAX_TOKENS = 90_000;
 
 /** Disable thinking/reasoning tokens for Qwen3-style models.
  *  0 = fully disable thinking (fast code generation).
@@ -59,6 +59,7 @@ export async function executeAll(
   // appears in ProjectBrowser as soon as the build starts.
   const plan = useProjectPlanStore.getState().plan;
   const conversation = useProjectPlanStore.getState().conversation;
+  const stackSelected = plan?.stack?.selected ?? [];
   if (plan) {
     try {
       await writeFile(
@@ -158,18 +159,19 @@ export async function executeAll(
       const rawPrompt =
         attempt === 0
           ? task.isSystem
-            ? buildFixerPrompt(depContents)
-            : buildTaskExecutorPrompt(task, depContents)
+            ? buildFixerPrompt(depContents, stackSelected)
+            : buildTaskExecutorPrompt(task, depContents, stackSelected)
           : lastTcErrors.length > 0
             ? buildTypecheckFixPrompt(
                 task,
                 depContents,
                 lastTcErrors,
                 lastOutput,
+                stackSelected,
               )
             : lastOutput
               ? buildRetryPrompt(lastOutput, lastError)
-              : buildTaskExecutorPrompt(task, depContents);
+              : buildTaskExecutorPrompt(task, depContents, stackSelected);
       // Prepend /no_think to suppress qwen3 extended thinking (other models ignore it).
       const prompt = NO_THINK_PREFIX + rawPrompt;
 
@@ -775,6 +777,10 @@ export async function executeSingleTask(
   store.updateTaskStatus(task.id, "running");
   store.clearStream();
 
+  // Retrieve stack to produce correct prompts for the project's framework.
+  const singleTaskPlan = useProjectPlanStore.getState().plan;
+  const singleTaskStack = singleTaskPlan?.stack?.selected ?? [];
+
   // Build dep contents from already-done tasks
   const depContents: Record<string, string> = {};
   for (const depId of task.dependsOn) {
@@ -789,7 +795,7 @@ export async function executeSingleTask(
   for (let attempt = 0; attempt < 3; attempt++) {
     const rawPrompt =
       attempt === 0 || !lastOutput
-        ? buildTaskExecutorPrompt(task, depContents)
+        ? buildTaskExecutorPrompt(task, depContents, singleTaskStack)
         : buildRetryPrompt(lastOutput, lastError);
     const prompt = NO_THINK_PREFIX + rawPrompt;
 

@@ -1,0 +1,120 @@
+# Stripe Documentation
+
+When installing Stripe packages, always check the npm registry for the latest 
+version rather than relying on memorized version numbers. Run `npm view stripe 
+version` or check https://www.npmjs.com/package/stripe before pinning a version. 
+For Python, check https://pypi.org/project/stripe/. Never hardcode an old version 
+number from training data — always install with `@latest` or verify the current 
+version first.
+
+## Docs
+- [Testing](https://docs.stripe.com/testing.md): Simulate payments to test your integration.
+- [API Reference](https://docs.stripe.com/api.md)
+- [Receive payouts](https://docs.stripe.com/payouts.md): Set up your bank account to receive payouts.
+- [Platforms and marketplaces with Stripe Connect](https://docs.stripe.com/connect.md): Build a SaaS platform or marketplace with Connect.
+- [Supported currencies](https://docs.stripe.com/currencies.md): Learn which currencies Stripe supports for payments and bank payouts.
+- [API upgrades](https://docs.stripe.com/upgrades.md): Learn how to manage API versions and handle breaking changes in major releases.
+- [Stripe Projects CLI](https://docs.stripe.com/projects.md): Stripe Projects is a CLI for provisioning software stacks.
+- [Stripe SDKs](https://docs.stripe.com/sdks.md): Libraries and tools for interacting with your Stripe integration.
+- [Receive Stripe events in your webhook endpoint](https://docs.stripe.com/webhooks.md): Listen for events from Stripe on your webhook endpoint so your integration can automatically trigger reactions.
+- [Declines](https://docs.stripe.com/declines.md): Learn about payment declines and how to lower your decline rate.
+- [Refund and cancel payments](https://docs.stripe.com/refunds.md): Learn how to cancel or refund a payment.
+- [Security at Stripe](https://docs.stripe.com/security.md): Learn how Stripe handles security.
+- [Build a Stripe-hosted checkout page](https://docs.stripe.com/checkout/quickstart.md)
+- [Build an advanced integration](https://docs.stripe.com/payments/quickstart.md)
+- [Build a pre-built subscription page with Stripe Checkout](https://docs.stripe.com/billing/quickstart.md)
+- [Set up and deploy a webhook](https://docs.stripe.com/webhooks/quickstart.md): Learn how to set up and deploy a webhook to listen to events from Stripe.
+- [Types of events](https://docs.stripe.com/api/events/types.md)
+- [Integration security guide](https://docs.stripe.com/security/guide.md): Ensure PCI compliance and secure customer-server communications.
+- [Payments analytics](https://docs.stripe.com/payments/analytics.md): Learn about the performance of your payments using key metrics and reports.
+- [Integrate with events](https://docs.stripe.com/event-destinations.md): Send events from Stripe to webhook endpoints and cloud services.
+- [Resolve webhook signature verification errors](https://docs.stripe.com/webhooks/signature.md): Learn how to fix a common error when listening to webhook events.
+- [Start a team](https://docs.stripe.com/get-started/account/teams.md): Learn how to invite and interact with team members.
+- [Errors](https://docs.stripe.com/api/errors.md)
+- [Versioning](https://docs.stripe.com/api/versioning.md)
+
+## Payment Methods
+Acquire more customers and improve conversion by offering the most popular payment methods around the world. 
+
+- [Payment Methods API](https://docs.stripe.com/payments/payment-methods.md): Learn about the API that allows you to accept a range of global payment methods.
+- [Linked external accounts](https://docs.stripe.com/get-started/account/linked-external-accounts.md): Manage your linked external accounts.
+- [Bank Debits](https://docs.stripe.com/payments/bank-debits.md): Learn how to accept bank debits with Stripe.
+- [How cards work](https://docs.stripe.com/payments/cards/overview.md): Learn how an online credit or debit card payment works.
+- [Cartes Bancaires (CB)](https://docs.stripe.com/payments/cartes-bancaires.md): Learn about Cartes Bancaires, a common payment method in France.
+- [eftpos Australia](https://docs.stripe.com/payments/eftpos-australia.md): Learn about eftpos Australia, a common payment method in Australia.
+- [Stablecoin payments](https://docs.stripe.com/payments/stablecoin-payments.md): Learn about accepting payments in stablecoins.
+- [Buy now, pay later](https://docs.stripe.com/payments/buy-now-pay-later.md): Learn about buy now, pay later methods with Stripe.
+- [Afterpay and Clearpay payments](https://docs.stripe.com/payments/afterpay-clearpay.md): Offer your customers flexible financing while getting paid upfront with Afterpay (also known as Clearpay in the UK).
+- [Affirm payments](https://docs.stripe.com/payments/affirm.md): Offer your US and Canadian customers flexible financing while getting paid upfront with Affirm.
+- [Klarna payments](https://docs.stripe.com/payments/klarna.md): Allow customers to make flexible payments while getting paid upfront with Klarna.
+- [Bank redirects](https://docs.stripe.com/payments/bank-redirects.md): Learn about bank redirects with Stripe.
+- [Bank transfer payments](https://docs.stripe.com/payments/bank-transfers.md): Learn about bank transfers and managing payments with the customer balance.
+- [Real-time payments](https://docs.stripe.com/payments/real-time.md): Learn about real-time payments with Stripe.
+- [Vouchers](https://docs.stripe.com/payments/vouchers.md): Learn about voucher payment methods with Stripe.
+- [Wallets](https://docs.stripe.com/payments/wallets.md): Learn about wallet payments with Stripe.
+- [Regions with special payment method requirements](https://docs.stripe.com/payments/local-markets.md): Accept South Korean or Nigerian payment methods.
+- [Custom payment methods](https://docs.stripe.com/payments/payment-methods/custom-payment-methods.md): Extend your integrations with additional payment methods processed outside of Stripe.
+- [Orchestration](https://docs.stripe.com/payments/orchestration.md): Create rules to route payments across your payment processors.
+
+## Checkout
+Build a low-code payment form and embed it on your site or host it on Stripe. Checkout creates a customizable form for collecting payments. You can redirect customers to a Stripe-hosted payment page, embed Checkout directly in your website, or create a customized checkout page with Stripe Elements. It supports one-time payments and subscriptions and accepts over 40 local payment methods. For a full list of Checkout features.
+
+- [Build a payments page](https://docs.stripe.com/payments/checkout.md): Create a payments page with prebuilt UIs using the Checkout Sessions API.
+- [Build a Stripe-hosted checkout page](https://docs.stripe.com/checkout/quickstart.md)
+- [Embed a checkout page in your site](https://docs.stripe.com/checkout/embedded/quickstart.md)
+- [How Checkout works](https://docs.stripe.com/payments/checkout/how-checkout-works.md): Learn how to use Checkout to collect payments on your website.
+- [Customize Checkout](https://docs.stripe.com/payments/checkout/customization.md): Customize the appearance and behavior of Checkout.
+- [The Setup Intents API](https://docs.stripe.com/payments/setup-intents.md): Learn more about the Setup Intents API for saving payment methods.
+- [Fulfill orders](https://docs.stripe.com/checkout/fulfillment.md): Learn how to fulfill payments received with the Checkout Sessions API.
+- [Customize redirect behavior](https://docs.stripe.com/payments/checkout/custom-success-page.md): Display a confirmation page with your customer's order information.
+- [Add discounts](https://docs.stripe.com/payments/checkout/discounts.md): Reduce the amount charged to a customer by discounting their subtotal with coupons and promotion codes.
+- [Use your custom domain](https://docs.stripe.com/payments/checkout/custom-domains.md): Learn how to bring your own custom domain to Stripe Checkout, Payment Links, and customer portal.
+- [Limit customers to one subscription](https://docs.stripe.com/payments/checkout/limit-subscriptions.md): Direct customers to manage their subscription when they already have one.
+- [Cross-sells](https://docs.stripe.com/payments/checkout/cross-sells.md): Enable customers to purchase complementary products at checkout by using cross-sells.
+- [Overview](https://docs.stripe.com/products-prices/overview.md): Model your business on Stripe with products and prices.
+- [Subscriptions](https://docs.stripe.com/payments/subscriptions.md): Create subscriptions for your customers.
+- [Charge for shipping](https://docs.stripe.com/payments/during-payment/charge-shipping.md): Create different shipping rates for your customers.
+- [Collect taxes](https://docs.stripe.com/payments/checkout/taxes.md): Learn how to collect taxes with Stripe Tax.
+- [Manage payment methods](https://docs.stripe.com/payments/checkout/payment-methods.md): Use dynamic payment methods or manually define the payment methods to allow per checkout session.
+- [Extend checkout with custom components](https://docs.stripe.com/payments/checkout/custom-components.md): Display custom text and collect additional information on Checkout Sessions.
+- [Extend checkout with custom components](https://docs.stripe.com/payments/checkout/custom-components.md): Display custom text and collect additional information on Checkout Sessions.
+- [Collect physical addresses](https://docs.stripe.com/payments/collect-addresses.md): Learn how to collect billing and shipping addresses.
+- [Customize card brands](https://docs.stripe.com/payments/checkout/customization/card-brands.md): Customize the card brands that Checkout displays.
+- [Save payment details during payment](https://docs.stripe.com/payments/checkout/save-during-payment.md): Learn how to accept a payment and save your customer's payment details for future purchases.
+- [After the payment](https://docs.stripe.com/payments/checkout/after-the-payment.md): Customize the post-payment checkout process.
+- [Set the billing cycle date](https://docs.stripe.com/payments/checkout/billing-cycle.md): Set a subscription's billing cycle anchor to a fixed date.
+- [Let customers decide what to pay](https://docs.stripe.com/payments/checkout/pay-what-you-want.md): Accept tips and donations, or sell pay-what-you-want products and services.
+- [Subscription upsells](https://docs.stripe.com/payments/checkout/upsells.md): Enable customers to upgrade their subscription plan at checkout by using upsells.
+- [No-cost orders](https://docs.stripe.com/payments/checkout/no-cost-orders.md): Accept orders for no-cost line items or apply 100% off discounts for one-time payments.
+- [Analyze your conversion funnel](https://docs.stripe.com/payments/checkout/analyze-conversion-funnel.md): Analyze your Stripe Checkout conversion funnel with Google Analytics 4.
+- [Add discounts, upsells, and optional items](https://docs.stripe.com/payments/checkout/promotions.md): Boost sales with discounts and offers.
+- [Manual currency prices](https://docs.stripe.com/payments/checkout/localize-prices/manual-currency-prices.md): Present local currencies to customers with manual currency prices.
+- [Collect customer phone numbers](https://docs.stripe.com/payments/checkout/phone-numbers.md): Collect a phone number for shipping or invoicing when your customer makes a payment.
+- [Dynamically customize shipping options](https://docs.stripe.com/payments/checkout/custom-shipping-options.md): Update shipping options based on a customer's shipping address.
+- [One-time payments with Checkout](https://docs.stripe.com/payments/checkout/client.md): Learn how to accept one-time card payments with just a few lines of code.
+- [Set up future payments](https://docs.stripe.com/payments/checkout/save-and-reuse.md): Learn how to save payment details in a Checkout session and charge your customers later.
+- [Make line item quantities adjustable](https://docs.stripe.com/payments/checkout/adjustable-quantity.md): Enable your customers to adjust the quantity of items during checkout.
+- [Elements with Checkout Sessions API beta changelog](https://docs.stripe.com/checkout/elements-with-checkout-sessions-api/changelog.md): Keep track of changes to the Elements with Checkout Sessions API beta integration.
+- [Checkout prices migration guide](https://docs.stripe.com/payments/checkout/migrating-prices.md): Learn how to update your integration to use prices with Stripe Checkout.
+- [Checkout Sessions](https://docs.stripe.com/api/checkout/sessions.md)
+- [The Checkout Session object](https://docs.stripe.com/api/checkout/sessions/object.md)
+- [Create a Checkout Session](https://docs.stripe.com/api/checkout/sessions/create.md)
+
+## Payments
+Integrate a Stripe product to start accepting payments online and in person, embed financial services, power custom revenue models, and more.
+
+- [Accept a payment](https://docs.stripe.com/payments/accept-a-payment.md): Securely accept payments online.
+- [The Payment Intents API](https://docs.stripe.com/payments/payment-intents.md): Learn how to use the Payment Intents API for Stripe payments.
+- [Multi-currency settlement](https://docs.stripe.com/payouts/multicurrency-settlement.md): Accept, settle, and pay out funds in multiple currencies.
+- [Stripe decline codes](https://docs.stripe.com/declines/codes.md): Learn about Stripe decline codes and how to resolve them when a charge fails.
+- [Place a hold on a payment method](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method.md): Separate payment authorization and capture to create a charge now, but capture funds later.
+- [Save a customer's payment method when they use it for a payment](https://docs.stripe.com/payments/save-during-payment.md): Learn how to save your customer's payment details for future purchases when they make a payment.
+- [Save a customer's payment method without making a payment](https://docs.stripe.com/payments/save-and-reuse.md): Learn how to save a payment method and charge it later.
+- [Payment status updates](https://docs.stripe.com/payments/payment-intents/verifying-status.md): Monitor and verify payment status, so that you can respond to successful and failed payments.
+- [Payment method integration options](https://docs.stripe.com/payments/payment-methods/integration-options.md): Learn about the different ways to integrate payment methods.
+- [Payment Methods API](https://docs.stripe.com/payments/payment-methods.md): Learn about the API that allows you to accept a range of global payment methods.
+- [Create an embeddable buy button](https://docs.stripe.com/payment-links/buy-button.md): Use Payment Links to create an embeddable buy button for your website.
+- [After a payment link payment](https://docs.stripe.com/payment-links/post-payment.md): Learn what you can do after receiving a payment link payment.
+- [Share a payment link](https://docs.stripe.com/payment-links/share.md): Share payment links across social media, emails, or your website.
+- [Payment Intents](https://docs.stripe.com/api/payment_intents.md)
+- [The PaymentIntent object](https://docs.stripe.com/api/payment_intents/object.md)

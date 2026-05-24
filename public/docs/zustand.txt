@@ -1,0 +1,66 @@
+# Zustand
+
+## Documentation
+
+- [Introduction](/learn/getting-started/introduction): How to use Zustand
+- [Comparison](/learn/getting-started/comparison): How Zustand stacks up against similar libraries
+- [Tutorial: Tic-Tac-Toe](/learn/guides/tutorial-tic-tac-toe): Building a game
+- [Updating state](/learn/guides/updating-state)
+- [Practice with no store actions](/learn/guides/practice-with-no-store-actions)
+- [Slices Pattern](/learn/guides/slices-pattern)
+- [Immutable state and merging](/learn/guides/immutable-state-and-merging)
+- [Map and Set Usage](/learn/guides/maps-and-sets-usage)
+- [Prevent rerenders with useShallow](/learn/guides/prevent-rerenders-with-use-shallow)
+- [Connect to state with URL](/learn/guides/connect-to-state-with-url-hash)
+- [Calling actions outside a React event handler in pre React 18](/learn/guides/event-handler-in-pre-react-18)
+- [Beginner TypeScript Guide](/learn/guides/beginner-typescript)
+- [Advanced TypeScript Guide](/learn/guides/advanced-typescript)
+- [Auto Generating Selectors](/learn/guides/auto-generating-selectors)
+- [Setup with Next.js](/learn/guides/nextjs)
+- [SSR and Hydration](/learn/guides/ssr-and-hydration)
+- [Initialize state with props](/learn/guides/initialize-state-with-props)
+- [Testing](/learn/guides/testing): Writing Tests
+- [Flux inspired practice](/learn/guides/flux-inspired-practice)
+- [How to reset state](/learn/guides/how-to-reset-state)
+- [create](/reference/apis/create): How to create stores
+- [createStore](/reference/apis/create-store): How to create vanilla stores
+- [createWithEqualityFn](/reference/apis/create-with-equality-fn): How to create efficient stores
+- [shallow](/reference/apis/shallow): How compare simple data effectively
+- [useStore](/reference/hooks/use-store): How to use vanilla stores in React
+- [useStoreWithEqualityFn](/reference/hooks/use-store-with-equality-fn): How to use vanilla stores effectively in React
+- [useShallow](/reference/hooks/use-shallow): How to memoize selector functions
+- [persist](/reference/middlewares/persist): How to persist a store
+- [devtools](/reference/middlewares/devtools): How to time-travel debug your store
+- [redux](/reference/middlewares/redux): How to use actions and reducers in a store
+- [immer](/reference/middlewares/immer): How to perform immutable updates in a store without boilerplate code
+- [combine](/reference/middlewares/combine): How to create a store and get types automatically inferred
+- [subscribeWithSelector](/reference/middlewares/subscribe-with-selector): How to subscribe to granular store updates in a store
+- [Persisting store data](/reference/integrations/persisting-store-data)
+- [Immer middleware](/reference/integrations/immer-middleware)
+- [Third-party Libraries](/reference/integrations/third-party-libraries)
+- [How to Migrate to v5 from v4](/reference/migrations/migrating-to-v5)
+- [Migrating to v4](/reference/migrations/migrating-to-v4)
+- [createContext from zustand/context](/reference/previous-versions/zustand-v3-create-context)
+- [index](/index)
+- [Learn](/learn/index): A guided path to understand Zustand fundamentals, common patterns, and when to reach for specific tools.
+- [Reference](/reference/index): API-first reference for stores, hooks, middlewares, and integrations.
+
+## MCP Server
+
+This documentation is available via Model Context Protocol (MCP) server at https://docs.pmnd.rs/api/mcp
+
+Configure in your MCP client:
+```json
+{
+  "mcpServers": {
+    "pmndrs": {
+      "type": "http",
+      "url": "https://docs.pmnd.rs/api/mcp"
+    }
+  }
+}
+```
+
+---
+
+For full documentation content, see llms-full.txt

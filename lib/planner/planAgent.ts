@@ -59,7 +59,7 @@ function extractPlan(response: string): ProjectPlan | null {
 
 /** Cap planning chat responses — prevents thinking-heavy models from
  *  generating unbounded tokens and aborting the stream mid-plan. */
-const PLAN_MAX_TOKENS = 16_384;
+const PLAN_MAX_TOKENS = 24_000;
 
 export async function sendMessage(
   userMessage: string,

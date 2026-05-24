@@ -7,15 +7,47 @@ const MAX_CHARS = 8_000;
 export const TASK_GEN_MAX_CHARS = 2_500;
 const CONTEXT_LINES = 50;
 
+/**
+ * Stack IDs that have a locally-cached doc file under public/docs/{id}.txt.
+ * Updated automatically when you run `npm run fetch-docs`.
+ * The set is checked at runtime; unknown IDs fall through to network fetch.
+ */
+const LOCAL_DOC_IDS = new Set([
+  "nextjs",
+  "typescript",
+  "reactjs",
+  "javascript",
+  "tailwind",
+  "bootstrap",
+  "shadcn",
+  "mui",
+  "react-bootstrap",
+  "firestore",
+  "nextauth",
+  "firebase-auth",
+  "rhf",
+  "zustand",
+  "framer",
+  "gemini",
+]);
+
+async function fetchLocalDoc(stackId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`/docs/${stackId}.txt`, { cache: "force-cache" });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.length >= 100 ? text : null;
+  } catch {
+    return null;
+  }
+}
+
 function stripHtml(raw: string): string {
-  // Remove script, style, nav, header, footer, aside blocks
   let text = raw.replace(
     /<(script|style|nav|header|footer|aside|noscript)[^>]*>[\s\S]*?<\/\1>/gi,
     "",
   );
-  // Remove all remaining HTML tags
   text = text.replace(/<[^>]+>/g, " ");
-  // Decode common HTML entities
   text = text
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
@@ -23,7 +55,6 @@ function stripHtml(raw: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, " ");
-  // Normalize whitespace
   text = text.replace(/\s+/g, " ").trim();
   return text;
 }
@@ -39,16 +70,35 @@ function extractAroundKeyword(text: string, keyword: string): string {
   return lines.slice(start, end).join(". ");
 }
 
+/**
+ * Fetch a documentation chunk for a given URL (and optional stack ID).
+ * Resolution order:
+ *   1. In-memory cache
+ *   2. Local static file at /docs/{stackId}.txt  (served from public/)
+ *   3. Live network fetch of `url` with HTML stripping
+ */
 export async function fetchDocChunk(
   url: string,
+  stackId?: string,
   keyword?: string,
 ): Promise<string> {
-  const cacheKey = `${url}::${keyword ?? ""}`;
+  const cacheKey = `${stackId ?? url}::${keyword ?? ""}`;
   if (docCache.has(cacheKey)) return docCache.get(cacheKey)!;
 
+  // ── 1. Try local bundled doc ──────────────────────────────────────────────
+  if (stackId && LOCAL_DOC_IDS.has(stackId)) {
+    const local = await fetchLocalDoc(stackId);
+    if (local) {
+      let text = local.slice(0, MAX_CHARS);
+      if (keyword) text = extractAroundKeyword(text, keyword);
+      docCache.set(cacheKey, text);
+      return text;
+    }
+  }
+
+  // ── 2. Network fallback ───────────────────────────────────────────────────
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
   let raw: string;
   try {
     const res = await fetch(url, { signal: controller.signal });
@@ -79,7 +129,7 @@ export async function fetchStackDocs(
   const selected = stackOptions.filter((o) => stackIds.includes(o.id));
   const entries = await Promise.all(
     selected.map(async (opt) => {
-      const chunk = await fetchDocChunk(opt.docUrl);
+      const chunk = await fetchDocChunk(opt.docUrl, opt.id);
       return [opt.id, chunk] as const;
     }),
   );

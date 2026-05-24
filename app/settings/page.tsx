@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import appConfig from "@/app.config";
 import AuthModal from "@/components/auth/AuthModal";
+import ModelBenchmark from "@/components/shared/ModelBenchmark";
 
 type ConnectionStatus = "idle" | "checking" | "ok" | "fail";
 
@@ -227,27 +228,21 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Max tokens */}
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Max Tokens</label>
-          <input
-            type="number"
-            value={store.maxTokens}
-            onChange={(e) => store.setMaxTokens(parseInt(e.target.value, 10))}
-            min={512}
-            max={32768}
-            step={512}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
         <div className="flex items-center gap-3 pt-2">
           <Button variant="outline" onClick={store.reset}>
             Reset to Defaults
           </Button>
         </div>
       </section>
-
+      {/* ── Model Analysis ──────────────────────────────────────────────── */}
+      {availableModels.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-base font-semibold border-b border-border pb-2">
+            Model Analysis
+          </h2>
+          <ModelBenchmark models={availableModels} baseConfig={store} />
+        </section>
+      )}
       {/* â”€â”€ File System Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="space-y-4">
         <h2 className="text-base font-semibold border-b border-border pb-2">

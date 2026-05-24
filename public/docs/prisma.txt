@@ -1,0 +1,102 @@
+# Prisma Documentation
+
+> **Prisma changes frequently — verify against the changelog and current docs before implementing.**
+> Do not rely on training data for Prisma features. APIs, configuration, and conventions can change between versions.
+>
+> First, fetch https://www.prisma.io/changelog.md to check for recent or relevant breaking changes,
+> then look up the relevant topic in the documentation below.
+
+> This documentation covers the current docs plus legacy v6 pages.
+> Prefer the Latest ORM section for current recommendations.
+> v6 pages are maintained for backwards compatibility only.
+
+## Common Queries
+
+- [`Check the Prisma changelog for recent changes`](https://www.prisma.io/changelog.md): Prisma changes frequently. Fetch this machine-readable changelog before implementing any Prisma feature to check for breaking changes, API updates, or new conventions.
+- [`Start a new Prisma ORM project`](https://www.prisma.io/docs/prisma-orm/quickstart/prisma-postgres): Set up Prisma ORM, Prisma Client, and Prisma Postgres in a new TypeScript app.
+- [`Connect to Prisma Postgres`](https://www.prisma.io/docs/postgres/database/connecting-to-your-database): Choose the right connection string for Prisma ORM, PostgreSQL tools, and serverless runtimes.
+- [`Run Prisma Postgres locally`](https://www.prisma.io/docs/postgres/database/local-development): Use local Prisma Postgres during development and switch to a hosted database for production.
+- [`Manage database connections`](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections): Configure Prisma Client connection management for long-running and serverless apps.
+- [`Create and apply migrations`](https://www.prisma.io/docs/orm/prisma-migrate/getting-started): Use Prisma Migrate to evolve your database schema in development.
+- [`Deploy migrations safely`](https://www.prisma.io/docs/orm/prisma-client/deployment/deploy-database-changes-with-prisma-migrate): Apply schema changes in production with Prisma Migrate.
+- [`Use Query Insights`](https://www.prisma.io/docs/query-insights): Inspect slow queries, connect Prisma calls to SQL, and apply focused fixes.
+- [`Set up the Prisma MCP server`](https://www.prisma.io/docs/ai/tools/mcp-server): Connect AI agents to Prisma Postgres workflows with the local or remote MCP server.
+- [`Use the Prisma Client API`](https://www.prisma.io/docs/orm/reference/prisma-client-reference): Look up Prisma Client query APIs, options, and generated types.
+- [`Use the Prisma CLI`](https://www.prisma.io/docs/orm/reference/prisma-cli-reference): Look up Prisma CLI commands for init, generate, migrate, db, and studio workflows.
+- [`Troubleshoot Prisma ORM errors`](https://www.prisma.io/docs/orm/reference/errors): Find common Prisma ORM errors and links to deeper troubleshooting pages.
+- [`Troubleshoot Prisma Postgres`](https://www.prisma.io/docs/postgres/troubleshooting): Resolve common Prisma Postgres issues.
+- [`Review pricing`](https://www.prisma.io/pricing): Compare Prisma plans and pricing for Prisma Postgres and Prisma platform features.
+- [`Use Prisma Postgres with Next.js`](https://www.prisma.io/docs/guides/frameworks/nextjs): Set up Prisma ORM and Prisma Postgres in a Next.js app with App Router.
+- [`Use Prisma Postgres with SvelteKit`](https://www.prisma.io/docs/guides/frameworks/sveltekit): Set up Prisma ORM and Prisma Postgres in a SvelteKit application.
+- [`Use Prisma Postgres with Nuxt`](https://www.prisma.io/docs/guides/frameworks/nuxt): Set up Prisma ORM and Prisma Postgres in a Nuxt application.
+- [`Use Prisma Postgres with Hono on Cloudflare Workers`](https://www.prisma.io/docs/guides/frameworks/hono): Set up Prisma ORM and Prisma Postgres in a Hono app deployed to Cloudflare Workers.
+
+## Product Area Indexes
+
+- [`Prisma ORM`](https://www.prisma.io/docs/llms/orm.txt): Prisma ORM setup, schema modeling, Prisma Client, migrations, and references.
+- [`Prisma Postgres`](https://www.prisma.io/docs/llms/postgres.txt): Prisma Postgres setup, connection strings, local development, operations, and guides.
+- [`Query Insights`](https://www.prisma.io/docs/llms/query-insights.txt): Query performance analysis, slow query inspection, and Prisma SQL comment setup.
+- [`Prisma MCP`](https://www.prisma.io/docs/llms/mcp.txt): MCP server setup for Prisma Postgres and Prisma CLI workflows.
+
+## Latest
+
+- [``client`: Add methods to Prisma Client`](https://www.prisma.io/docs/orm/v6/prisma-client/client-extensions/client): Extend the functionality of Prisma Client, client component
+- [``model`: Add custom methods to your models`](https://www.prisma.io/docs/orm/v6/prisma-client/client-extensions/model): Extend the functionality of Prisma Client, model component
+- [``query`: Create custom Prisma Client queries`](https://www.prisma.io/docs/orm/v6/prisma-client/client-extensions/query): Extend the functionality of Prisma Client, query component
+- [``result`: Add custom fields and methods to query results`](https://www.prisma.io/docs/orm/v6/prisma-client/client-extensions/result): Extend the functionality of Prisma Client, result component
+- [`About migration histories`](https://www.prisma.io/docs/orm/v6/prisma-migrate/understanding-prisma-migrate/migration-histories): About migration histories
+- [`About the shadow database`](https://www.prisma.io/docs/orm/prisma-migrate/understanding-prisma-migrate/shadow-database): Learn how Prisma Migrate uses shadow databases to detect schema drift
+- [`About the shadow database`](https://www.prisma.io/docs/orm/v6/prisma-migrate/understanding-prisma-migrate/shadow-database): About the shadow database
+- [`Add custom fields and methods to query results`](https://www.prisma.io/docs/orm/prisma-client/client-extensions/result): Extend the functionality of Prisma Client, result component
+- [`Add custom methods to your models`](https://www.prisma.io/docs/orm/prisma-client/client-extensions/model): Extend the functionality of Prisma Client, model component
+- [`Add methods to Prisma Client`](https://www.prisma.io/docs/orm/prisma-client/client-extensions/client): Extend the functionality of Prisma Client, client component
+- [`Agent Skills`](https://www.prisma.io/docs/ai/tools/skills): Give your AI coding agent up-to-date Prisma knowledge with installable skills
+- [`Aggregation, grouping, and summarizing`](https://www.prisma.io/docs/orm/prisma-client/queries/aggregation-grouping-summarizing): Use Prisma Client to aggregate, group by, count, and select distinct.
+- [`Aggregation, grouping, and summarizing`](https://www.prisma.io/docs/orm/v6/prisma-client/queries/aggregation-grouping-summarizing): Use Prisma Client to aggregate, group by, count, and select distinct.
+- [`AI SDK (with Next.js)`](https://www.prisma.io/docs/guides/integrations/ai-sdk): Build a chat application with AI SDK, Prisma, and Next.js to store chat sessions and messages
+- [`Alchemy`](https://www.prisma.io/docs/postgres/iac/alchemy): Provision and manage Prisma Postgres projects, databases, and connections with Alchemy.
+- [`API patterns`](https://www.prisma.io/docs/orm/core-concepts/api-patterns): How to use Prisma ORM with REST APIs, GraphQL servers, and fullstack frameworks
+- [`Astro`](https://www.prisma.io/docs/guides/frameworks/astro): Learn how to use Prisma ORM in an Astro app
+- [`Astro + Prisma`](https://www.prisma.io/docs/ai/prompts/astro): Step-by-step guide for integrating Prisma ORM and Prisma Postgres in an Astro.js project
+- [`Auth.js (with Next.js)`](https://www.prisma.io/docs/guides/authentication/authjs/nextjs): Learn how to use Prisma ORM in a Next.js app with Auth.js
+- [`Authentication`](https://www.prisma.io/docs/management-api/authentication): Learn how to authenticate with the Prisma Management API using service tokens or OAuth 2.0
+- [`Backups`](https://www.prisma.io/docs/postgres/database/backups): Manage and restore database backups in Prisma Postgres
+- [`Baselining a database`](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining): How to initialize a migration history for an existing database that contains important data.
+- [`Baselining a database`](https://www.prisma.io/docs/orm/v6/prisma-migrate/workflows/baselining): How to initialize a migration history for an existing database that contains important data.
+- [`Best Postgres for AI apps`](https://www.prisma.io/docs/postgres/best-postgres-for-ai-apps): Why Prisma Postgres works well for AI and LLM workloads — built-in pooling, query caching, edge connectivity, pgvector, and MCP support.
+- [`Best practices`](https://www.prisma.io/docs/orm/more/best-practices): Learn production-ready patterns for schema design, query optimization, type safety, security, and deployment with Prisma ORM.
+- [`Better Auth (with Astro)`](https://www.prisma.io/docs/guides/authentication/better-auth/astro): Learn how to use Prisma ORM in an Astro app with Better Auth
+- [`Better Auth (with Next.js)`](https://www.prisma.io/docs/guides/authentication/better-auth/nextjs): Learn how to use Prisma ORM in a Next.js app with Better Auth
+- [`Build a Tweet SaaS with Next.js, Prisma Postgres, and Ollama`](https://www.prisma.io/docs/ai/tutorials/typefully-clone): A complete vibe coding tutorial: build a tweet polishing app from scratch using Next.js, Prisma ORM, Prisma Postgres, UploadThing, and a local LLM with Ollama.
+- [`Build faster with Prisma + AI`](https://www.prisma.io/docs/ai): Build faster with Prisma and AI coding tools like Cursor, Codex, and ChatGPT
+- [`Bun`](https://www.prisma.io/docs/guides/runtimes/bun): Learn how to use Prisma ORM in a Bun application with Prisma Postgres
+- [`Bun workspaces`](https://www.prisma.io/docs/guides/deployment/bun-workspaces): Learn step-by-step how to integrate Prisma ORM in a Bun workspaces monorepo to build scalable and modular applications efficiently
+- [`Bundler issues`](https://www.prisma.io/docs/orm/more/troubleshooting/bundler-issues): Solve ENOENT package error with vercel/pkg and other bundlers
+- [`Bundler issues`](https://www.prisma.io/docs/orm/v6/more/troubleshooting/bundler-issues): Solve ENOENT package error with vercel/pkg and other bundlers
+- [`Case sensitivity`](https://www.prisma.io/docs/orm/v6/prisma-client/queries/case-sensitivity): How Prisma Client handles case sensitivity when filtering and sorting.
+- [`Caveats when deploying to AWS platforms`](https://www.prisma.io/docs/orm/prisma-client/deployment/caveats-when-deploying-to-aws-platforms): Known caveats when deploying to an AWS platform
+- [`Caveats when deploying to AWS platforms`](https://www.prisma.io/docs/orm/v6/prisma-client/deployment/caveats-when-deploying-to-aws-platforms): Known caveats when deploying to an AWS platform
+- [`ChatGPT`](https://www.prisma.io/docs/ai/tools/chatgpt): Learn how to add the Prisma MCP server to ChatGPT to manage your Prisma Postgres databases
+- [`ChatGPT`](https://www.prisma.io/docs/orm/v6/more/ai-tools/chatgpt): Learn how to add the remote Prisma MCP server to ChatGPT to manage your Prisma Postgres databases.
+- [`Check constraints`](https://www.prisma.io/docs/orm/more/troubleshooting/check-constraints): Learn how to configure CHECK constraints for data validation with Prisma ORM and PostgreSQL
+- [`Check constraints`](https://www.prisma.io/docs/orm/v6/more/troubleshooting/check-constraints): Learn how to configure CHECK constraints for data validation with Prisma ORM and PostgreSQL.
+- [`Choose a setup path`](https://www.prisma.io/docs/getting-started): Choose the fastest path to start using Prisma ORM or Prisma Postgres in a new or existing project.
+- [`Clerk (with Astro)`](https://www.prisma.io/docs/guides/authentication/clerk/astro): Learn how to use Prisma ORM in an Astro app with Clerk Auth
+- [`Clerk (with Next.js)`](https://www.prisma.io/docs/guides/authentication/clerk/nextjs): Learn how to use Prisma ORM in a Next.js app with Clerk Auth
+- [`CLI Overview`](https://www.prisma.io/docs/cli): The Prisma CLI is the command-line interface for Prisma ORM. Use it to initialize projects, generate Prisma Client, manage databases, run migrations, and more
+- [`Cloudflare D1`](https://www.prisma.io/docs/guides/deployment/cloudflare-d1): Learn how to use Prisma ORM with Cloudflare D1
+- [`Cloudflare D1`](https://www.prisma.io/docs/orm/v6/overview/databases/cloudflare-d1): Guide to Cloudflare D1
+- [`Cloudflare Workers`](https://www.prisma.io/docs/guides/deployment/cloudflare-workers): Learn how to use Prisma ORM and Prisma Postgres in a Cloudflare Workers project
+- [`CockroachDB`](https://www.prisma.io/docs/prisma-orm/add-to-existing-project/cockroachdb): Add Prisma ORM to an existing TypeScript project with CockroachDB and learn database introspection, baselining, and querying
+- [`CockroachDB`](https://www.prisma.io/docs/prisma-orm/quickstart/cockroachdb): Create a new TypeScript project from scratch by connecting Prisma ORM to CockroachDB and generating a Prisma Client for database access
+- [`CockroachDB`](https://www.prisma.io/docs/orm/v6/overview/databases/cockroachdb): Guide to CockroachDB
+- [`Codex`](https://www.prisma.io/docs/ai/tools/codex): Learn how to install the Prisma Codex plugin and use Prisma MCP from Codex
+- [`Composite types`](https://www.prisma.io/docs/orm/prisma-client/special-fields-and-types/composite-types): Work with composite types and embedded documents in MongoDB
+- [`Composite types`](https://www.prisma.io/docs/orm/v6/prisma-client/special-fields-and-types/composite-types): Learn about composite types in Prisma Client for MongoDB
+- [`Computed fields`](https://www.prisma.io/docs/orm/v6/prisma-client/queries/computed-fields): This page explains how to use client extensions to add computed fields to Prisma models.
+- [`Concepts`](https://www.prisma.io/docs/console/concepts): Understand the core concepts of the Prisma Console: user accounts, workspaces, projects, and resources
+- [`Config API`](https://www.prisma.io/docs/orm/reference/prisma-config-reference): Complete reference for prisma.config.ts configuration options
+- [`Configure Prisma Client with PgBouncer`](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/pgbouncer): Configure Prisma Client with PgBouncer and other poolers: when to use pgbouncer=true, required transaction mode, prepared statements, and Prisma Migrate workarounds
+- [`Configure Prisma Client with PgBouncer`](https://www.prisma.io/docs/orm/v6/prisma-client/setup-and-configuration/databases-connections/pgbouncer): Configure Prisma Client with PgBouncer and other poolers: when to use pgbouncer=true, required transaction mode, prepared statements, and Prisma Migrate workarounds.
+- [`Configuring error formatting`](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/error-formatting): This page explains how to configure the formatting of errors when using Prisma Client
+- [`Configuring error formatting`](https://www.prisma.io/docs/orm/v6/prisma-client/setup-and-configuration/error-formatting): This page explains how to configure the formatting of errors when

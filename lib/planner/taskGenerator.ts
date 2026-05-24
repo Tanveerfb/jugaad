@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonrepair } from "jsonrepair";
 import { streamChat } from "@/lib/llm/client";
 import { buildTaskGeneratorPrompt } from "@/lib/llm/prompts";
 import { fetchStackDocs, TASK_GEN_MAX_CHARS } from "@/lib/llm/docFetcher";
@@ -7,7 +8,7 @@ import type { LLMConfig, ProjectPlan, Task } from "@/types";
 
 /** Hard cap on tokens for the task-generation LLM call.
  *  Scaled for 128K-context models — complex apps can produce 30+ tasks. */
-const TASK_GEN_MAX_TOKENS = 32_768;
+const TASK_GEN_MAX_TOKENS = 50_000;
 
 const TaskSchema = z.object({
   id: z.string(),
@@ -23,11 +24,17 @@ const TaskSchema = z.object({
 function extractTasks(response: string): Task[] {
   const match = response.match(/<tasks>([\s\S]*?)<\/tasks>/);
   if (!match) return [];
+  const raw = match[1].trim();
   try {
-    const parsed = JSON.parse(match[1].trim());
+    const parsed = JSON.parse(raw);
     return z.array(TaskSchema).parse(parsed) as Task[];
   } catch {
-    return [];
+    try {
+      const parsed = JSON.parse(jsonrepair(raw));
+      return z.array(TaskSchema).parse(parsed) as Task[];
+    } catch {
+      return [];
+    }
   }
 }
 
@@ -97,7 +104,22 @@ export async function generateTasks(
   const match = fullResponse.match(/<tasks>([\s\S]*?)<\/tasks>/);
   if (!match) throw new Error("LLM did not return a <tasks> block");
 
-  const parsed = JSON.parse(match[1].trim());
+  let parsed: unknown;
+  const rawJson = match[1].trim();
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    // LLM commonly leaves unescaped quotes inside instruction strings.
+    // jsonrepair handles the most frequent failure modes (unescaped chars,
+    // trailing commas, single quotes, bare keys, etc.).
+    try {
+      parsed = JSON.parse(jsonrepair(rawJson));
+    } catch (repairErr) {
+      throw new Error(
+        `Failed to parse task JSON even after repair: ${repairErr instanceof Error ? repairErr.message : String(repairErr)}`,
+      );
+    }
+  }
   const tasks = z.array(TaskSchema).parse(parsed) as Task[];
 
   // Step 5b: Repair broken dependsOn references.

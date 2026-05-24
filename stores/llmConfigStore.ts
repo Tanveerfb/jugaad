@@ -8,7 +8,6 @@ type LLMConfigStore = LLMConfig & {
   setBaseUrl: (url: string) => void;
   setModel: (model: string) => void;
   setTemperature: (t: number) => void;
-  setMaxTokens: (n: number) => void;
   reset: () => void;
 };
 
@@ -17,7 +16,6 @@ const defaultConfig: LLMConfig = {
   baseUrl: appConfig.defaults.llm.ollamaBaseUrl,
   model: appConfig.defaults.llm.model,
   temperature: appConfig.defaults.llm.temperature,
-  maxTokens: appConfig.defaults.llm.maxTokens,
 };
 
 export const useLLMConfigStore = create<LLMConfigStore>()(
@@ -35,7 +33,6 @@ export const useLLMConfigStore = create<LLMConfigStore>()(
       setBaseUrl: (url) => set({ baseUrl: url }),
       setModel: (model) => set({ model }),
       setTemperature: (temperature) => set({ temperature }),
-      setMaxTokens: (maxTokens) => set({ maxTokens }),
       reset: () => set(defaultConfig),
     }),
     { name: "llm-config" },

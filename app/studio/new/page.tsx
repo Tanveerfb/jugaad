@@ -36,6 +36,9 @@ export default function NewProjectPage() {
   const [genStream, setGenStream] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const streamScrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   const conversation = useProjectPlanStore((s) => s.conversation);
@@ -80,6 +83,20 @@ export default function NewProjectPage() {
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, [input]);
+
+  // Auto-scroll the stream panel to the bottom as chunks arrive,
+  // unless the user has manually scrolled up.
+  useEffect(() => {
+    if (!genStream) {
+      // New generation started — reset the scroll-pause flag.
+      userScrolledRef.current = false;
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      return;
+    }
+    if (userScrolledRef.current) return;
+    const el = streamScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [genStream]);
 
   async function handleSend() {
     const text = input.trim();
@@ -158,6 +175,26 @@ export default function NewProjectPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function handleStreamScroll() {
+    const el = streamScrollRef.current;
+    if (!el) return;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
+    if (!atBottom) {
+      // User scrolled up — pause auto-scroll and schedule a resume.
+      userScrolledRef.current = true;
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = setTimeout(() => {
+        userScrolledRef.current = false;
+        const container = streamScrollRef.current;
+        if (container) container.scrollTop = container.scrollHeight;
+      }, 7000);
+    } else {
+      // User scrolled back to bottom — resume immediately.
+      userScrolledRef.current = false;
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -294,7 +331,11 @@ export default function NewProjectPage() {
                     </span>
                   </div>
                   {/* Stream output */}
-                  <div className="bg-[#1e1e1e] max-h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
+                  <div
+                    ref={streamScrollRef}
+                    onScroll={handleStreamScroll}
+                    className="bg-[#1e1e1e] max-h-72 overflow-y-auto p-3 font-mono text-xs leading-relaxed"
+                  >
                     {genStream ? (
                       <pre className="text-green-400 whitespace-pre-wrap break-all">
                         {genStream}

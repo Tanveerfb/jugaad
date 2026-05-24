@@ -1,0 +1,81 @@
+# Clerk
+
+## Docs
+
+- [Clerk CLI](https://clerk.com/docs/cli.md): Learn how to use the Clerk CLI to set up authentication, manage configuration, and integrate with AI agents.
+- [Welcome to Clerk Docs](https://clerk.com/docs.md): Add complete user management to your application in minutes.
+- [Maintenance Mode](https://clerk.com/docs/maintenance-mode.md): Learn about Clerk's Maintenance Mode.
+- [Pin a Clerk SDK](https://clerk.com/docs/pinning.md): Learn how to pin a Clerk SDK to a specific version.
+- [Core concepts](https://clerk.com/docs/getting-started/core-concepts.md): Learn about the main concepts and objects that drive Clerk's powerful authentication and user management system.
+- [Quickstarts](https://clerk.com/docs/getting-started/quickstart/overview.md): See the getting started guides and tutorials.
+- [Set up your Clerk account](https://clerk.com/docs/getting-started/quickstart/setup-clerk.md): Set up a new Clerk account and integrate it into a new application.
+- [Next.js Quickstart (Pages Router)](https://clerk.com/docs/getting-started/quickstart/pages-router.md): Add authentication and user management to your Next.js app with Clerk.
+- [Chrome Extension Quickstart (JavaScript)](https://clerk.com/docs/getting-started/quickstart/chrome-extension-js.md): Add authentication and user management to your Chrome Extension with Clerk using plain TypeScript and esbuild.
+- [SDK References](https://clerk.com/docs/reference/overview.md): Learn about the Clerk and community SDK's available for integrating Clerk into your application.
+- [API Reference](https://clerk.com/docs/reference/api/overview.md): Access Clerk's frontend and backend API reference documentation.
+- [`verifyWebhook()`](https://clerk.com/docs/reference/backend/verify-webhook.md): Use the verifyWebhook() method to verify a webhook signature.
+- [`verifyToken()`](https://clerk.com/docs/reference/backend/verify-token.md): Use the verifyToken() method to verify a token signature.
+- [`clerkClient`](https://clerk.com/docs/reference/backend/overview.md): Use clerkClient to interact with Clerk's Backend API resources.
+- [`authenticateRequest()`](https://clerk.com/docs/reference/backend/authenticate-request.md): Use the authenticateRequest() method to verify a token passed from the frontend.
+- [`updateSamlConnection()`](https://clerk.com/docs/reference/backend/saml-connections/update-saml-connection.md): Use the updateSamlConnection() method to update a SAML connection.
+- [`getSamlConnection()`](https://clerk.com/docs/reference/backend/saml-connections/get-saml-connection.md): Use the getSamlConnection() method to retrieve a SAML connection.
+- [`getSamlConnectionList()`](https://clerk.com/docs/reference/backend/saml-connections/get-saml-connection-list.md): Use the getSamlConnectionList() method to retrieve the list of SAML connections for an instance.
+- [`deleteSamlConnection()`](https://clerk.com/docs/reference/backend/saml-connections/delete-saml-connection.md): Use the deleteSamlConnection() method to delete a SAML connection.
+- [`createSamlConnection()`](https://clerk.com/docs/reference/backend/saml-connections/create-saml-connection.md): Use the createSamlConnection() method to create a SAML connection.
+- [`verifySession()` (deprecated)](https://clerk.com/docs/reference/backend/sessions/verify-session.md): Use the verifySession() method to verify whether a session with a given ID corresponds to the provided session token.
+- [`revokeSession()`](https://clerk.com/docs/reference/backend/sessions/revoke-session.md): Use the revokeSession() method to revoke a session given its ID.
+- [`getToken()`](https://clerk.com/docs/reference/backend/sessions/get-token.md): Use the getToken() method to retrieve a token for a JWT template that is defined in the Clerk Dashboard.
+- [`getSession()`](https://clerk.com/docs/reference/backend/sessions/get-session.md): Use the getSession() method to retrieve a single session by its ID.
+- [`getSessionList()`](https://clerk.com/docs/reference/backend/sessions/get-session-list.md): Use the getSessionList() method to retrieve a list of sessions.
+- [`createSignInToken()`](https://clerk.com/docs/reference/backend/sign-in-tokens/create-sign-in-token.md): Use the createSignInToken() method to create a new sign-in token for a given user.
+- [`revokeSignInToken()`](https://clerk.com/docs/reference/backend/sign-in-tokens/revoke-sign-in-token.md): Use the revokeSignInToken() method to revoke a pending sign-in token.
+- [`createTestingToken()`](https://clerk.com/docs/reference/backend/testing-tokens/create-testing-token.md): Use the createTestingToken() method to create a testing token for the instance.
+- [`PaginatedResourceResponse`](https://clerk.com/docs/reference/backend/types/paginated-resource-response.md): An interface that describes the response of a method that returns a paginated list of resources.
+- [`Feature`](https://clerk.com/docs/reference/backend/types/feature.md): The Feature type represents a Feature that a Plan can offer.
+- [`CommerceSubscription`](https://clerk.com/docs/reference/backend/types/commerce-subscription.md): The Backend CommerceSubscription object holds information about a Subscription of your application.
+- [`CommerceSubscriptionItem`](https://clerk.com/docs/reference/backend/types/commerce-subscription-item.md): The Backend CommerceSubscriptionItem object holds information about a Subscription Item of your application.
+- [`CommercePlan`](https://clerk.com/docs/reference/backend/types/commerce-plan.md): The Backend CommercePlan object holds information about a Plan of your application.
+- [The Backend `Web3Wallet` object](https://clerk.com/docs/reference/backend/types/backend-web3-wallet.md): The Backend Web3Wallet object describes a Web3 wallet address.
+- [The Backend `WaitlistEntry` object](https://clerk.com/docs/reference/backend/types/backend-waitlist-entry.md): The Backend WaitlistEntry object is the model around a waitlist entry.
+- [The Backend `Verification` object](https://clerk.com/docs/reference/backend/types/backend-verification.md): The Backend Verification object describes the state of the verification process of a sign-in or sign-up attempt.
+- [The Backend `User` object](https://clerk.com/docs/reference/backend/types/backend-user.md): The Backend User object holds information about a user of your application. However, the Backend User object is different from the User object in that it is used in the Backend API.
+- [The Backend `Session` object](https://clerk.com/docs/reference/backend/types/backend-session.md): The Backend Session object holds information about a Session of your application. However, the Backend Session object is different from the Session object in that it is used in the Backend API.
+- [The Backend `SessionActivity` object](https://clerk.com/docs/reference/backend/types/backend-session-activity.md): The Backend SessionActivity object models the activity of a user session, capturing details such as the device type, browser information, and geographical location.
+- [The Backend `SamlConnection` object](https://clerk.com/docs/reference/backend/types/backend-saml-connection.md): The Backend SamlConnection object holds information about a SAML connection for an Organization.
+- [The Backend `RedirectUrl` object](https://clerk.com/docs/reference/backend/types/backend-redirect-url.md): The Backend RedirectUrl object represents a redirect URL in your application. This object is used in the Backend API.
+- [The Backend `PhoneNumber` object](https://clerk.com/docs/reference/backend/types/backend-phone-number.md): The Backend PhoneNumber object describes a phone number.
+- [The Backend `Organization` object](https://clerk.com/docs/reference/backend/types/backend-organization.md): The Backend Organization object holds information about an Organization, as well as methods for managing it. However, the it is different from the Organization object in that it is used in the Backend API and is not directly accessible from the Frontend API.
+- [The Backend `OrganizationMembership` object](https://clerk.com/docs/reference/backend/types/backend-organization-membership.md): The Backend OrganizationMembership object is the model around an Organization membership entity and describes the relationship between users and Organizations.
+- [The Backend `OrganizationInvitation` object](https://clerk.com/docs/reference/backend/types/backend-organization-invitation.md): The Backend OrganizationInvitation object is the model around an Organization invitation.
+- [The Backend `OAuthApplication` object](https://clerk.com/docs/reference/backend/types/backend-oauth-application.md): The Backend OAuthApplication object describes an OAuth Application.
+- [The Backend `OauthAccessToken` object](https://clerk.com/docs/reference/backend/types/backend-oauth-access-token.md): The Backend OAuthAccessToken object describes an OAuth Access Token.
+- [The Backend `Invitation` object](https://clerk.com/docs/reference/backend/types/backend-invitation.md): The Backend Invitation object represents an invitation to join your application.
+- [The Backend `IdentificationLink` object](https://clerk.com/docs/reference/backend/types/backend-identification-link.md): Contains information about any identifications that might be linked to the email address.
+- [The Backend `ExternalAccount` object](https://clerk.com/docs/reference/backend/types/backend-external-account.md): The Backend ExternalAccount object is a model around an identification obtained by an external provider (e.g. a social provider such as Google).
+- [The Backend `EnterpriseConnection` object](https://clerk.com/docs/reference/backend/types/backend-enterprise-connection.md): The Backend EnterpriseConnection object holds information about an enterprise connection (SAML or OAuth) for an instance or organization.
+- [The Backend `EnterpriseConnectionSamlConnection` object](https://clerk.com/docs/reference/backend/types/backend-enterprise-connection-saml-connection.md): The Backend EnterpriseConnectionSamlConnection object holds information about a SAML enterprise connection for an instance or organization.
+- [The Backend `EnterpriseConnectionOauthConfig` object](https://clerk.com/docs/reference/backend/types/backend-enterprise-connection-oauth-config.md): The Backend EnterpriseConnectionOauthConfig object represents the OAuth configuration data included in a Backend API EnterpriseConnection response.
+- [The Backend `EnterpriseAccount` object](https://clerk.com/docs/reference/backend/types/backend-enterprise-account.md): The Backend EnterpriseAccount object represents an identification obtained via enterprise SSO (SAML or OIDC).
+- [The Backend `EnterpriseAccountConnection` object](https://clerk.com/docs/reference/backend/types/backend-enterprise-account-connection.md): The Backend EnterpriseAccountConnection object represents an enterprise SSO connection associated with an enterprise account.
+- [The Backend `EmailAddress` object](https://clerk.com/docs/reference/backend/types/backend-email-address.md): The Backend EmailAddress object is a model around an email address.
+- [The Backend `Client` object](https://clerk.com/docs/reference/backend/types/backend-client.md): The Backend Client object holds information about the authenticated sessions in the current device. However, the Backend Client object is different from the Client object in that it is used in the Backend API.
+- [The Backend `APIKey` object](https://clerk.com/docs/reference/backend/types/backend-api-key.md): The Backend APIKey object holds information about an API key of your application.
+- [The Backend `AllowlistIdentifier` object](https://clerk.com/docs/reference/backend/types/backend-allowlist-identifier.md): The Backend AllowlistIdentifier object holds information about a AllowlistIdentifier of your application. However, the Backend AllowlistIdentifier object is different from the AllowlistIdentifier object in that it is used in the Backend API.
+- [Auth object](https://clerk.com/docs/reference/backend/types/auth-object.md): The Auth object contains information about the current user's session.
+- [`verifyTOTP()`](https://clerk.com/docs/reference/backend/user/verify-totp.md): Use the verifyTOTP() method to verify a TOTP or backup code for a user.
+- [`verifyPassword()`](https://clerk.com/docs/reference/backend/user/verify-password.md): Use the verifyPassword() method to check that the user's password matches the supplied input. Useful for custom auth flows and re-verification.
+- [`updateUser()`](https://clerk.com/docs/reference/backend/user/update-user.md): Use the updateUser() method to update a user.
+- [`updateUserProfileImage()`](https://clerk.com/docs/reference/backend/user/update-user-profile-image.md): Use the updateUserProfileImage() method to update a user's profile image.
+- [`updateUserMetadata()`](https://clerk.com/docs/reference/backend/user/update-user-metadata.md): Use the updateUserMetadata() method to update the metadata associated with the specified user.
+- [`unlockUser()`](https://clerk.com/docs/reference/backend/user/unlock-user.md): Use the unlockUser() method to remove a sign-in lock from a user.
+- [`unbanUser()`](https://clerk.com/docs/reference/backend/user/unban-user.md): Use the unbanUser() method to remove the ban mark from a user.
+- [`lockUser()`](https://clerk.com/docs/reference/backend/user/lock-user.md): Use the lockUser() method to mark a user as locked, which means they are not allowed to sign in again until the lock expires.
+- [`getUser()`](https://clerk.com/docs/reference/backend/user/get-user.md): Use the getUser() method to retrieve a single user by their ID.
+- [getUserOauthAccessToken()](https://clerk.com/docs/reference/backend/user/get-user-oauth-access-token.md): Use the getUserOauthAccessToken() method to retrieve the corresponding OAuth access token for a user.
+- [`getUserList()`](https://clerk.com/docs/reference/backend/user/get-user-list.md): Use the getUserList() method to retrieve a list of users.
+- [`getOrganizationMembershipList()`](https://clerk.com/docs/reference/backend/user/get-organization-membership-list.md): Use the getOrganizationMembershipList() method to retrieve a list of Organization memberships for a given user.
+- [`getOrganizationInvitationList()`](https://clerk.com/docs/reference/backend/user/get-organization-invitation-list.md): Use the getOrganizationInvitationList() method to retrieve a list of Organization invitations for a given user.
+- [`getCount()`](https://clerk.com/docs/reference/backend/user/get-count.md): Use the getCount() method to retrieve the total number of users.
+- [`disableUserMFA()`](https://clerk.com/docs/reference/backend/user/disable-user-mfa.md): Use the disableUserMFA() method to disable all of a user's MFA methods at once.
+- [`deleteUser()`](https://clerk.com/docs/reference/backend/user/delete-user.md): Use the deleteUser() method to delete a user.
+- [`deleteUserWeb3Wallet()`](https://clerk.com/docs/reference/backend/user/delete-user-web3-walle
