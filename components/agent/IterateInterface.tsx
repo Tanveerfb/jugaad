@@ -97,6 +97,20 @@ export default function IterateInterface() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
+  async function getLogs(): Promise<string | null> {
+    if (!projectPath) return null;
+    try {
+      const res = await fetch(
+        `/api/run/logs?projectPath=${encodeURIComponent(projectPath)}&lines=150`,
+      );
+      const data = (await res.json()) as { logs?: string[] };
+      const lines = data.logs ?? [];
+      return lines.length > 0 ? lines.join("\n") : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function capturePage(): Promise<string | null> {
     if (!projectPath) return null;
     try {
@@ -148,23 +162,18 @@ export default function IterateInterface() {
     }
   }
 
-  async function getRelevantFileContents(
-    userMessage: string,
-    filePaths: string[],
-  ): Promise<string> {
+  async function getAllFileContents(filePaths: string[]): Promise<string> {
     if (!projectPath || filePaths.length === 0) return "";
-    const lower = userMessage.toLowerCase();
-    // Match files whose name or parent path segments appear in the user message
-    const relevant = filePaths.filter((p) => {
-      const parts = p.replace(/\\/g, "/").split("/");
-      return parts.some((part) => {
-        const base = part.replace(/\.[^.]+$/, "").toLowerCase();
-        return base.length > 2 && lower.includes(base);
-      });
-    });
-    if (relevant.length === 0) return "";
-    const MAX_FILES = 5;
-    const toRead = relevant.slice(0, MAX_FILES);
+
+    // Skip generated/binary directories — only read source files
+    const SOURCE_EXTS = /\.(tsx?|jsx?|css|json|md|env[^/]*)$/i;
+    const SKIP_DIRS = /[\\/](node_modules|\.next|\.git|dist|out|build)[\\/]/;
+    const toRead = filePaths
+      .filter((p) => SOURCE_EXTS.test(p) && !SKIP_DIRS.test(p))
+      .slice(0, 60); // hard cap: 60 files max
+
+    if (toRead.length === 0) return "";
+
     const results = await Promise.allSettled(
       toRead.map(async (filePath) => {
         const res = await fetch(
@@ -174,13 +183,16 @@ export default function IterateInterface() {
         return { filePath, content: data.content ?? "" };
       }),
     );
+
     const sections: string[] = [];
+    let totalChars = 0;
+    const CHAR_CAP = 80_000; // ~20k tokens — keep prompt manageable
     for (const r of results) {
-      if (r.status === "fulfilled" && r.value.content) {
-        sections.push(
-          `--- File: ${r.value.filePath} ---\n${r.value.content}\n--- End: ${r.value.filePath} ---`,
-        );
-      }
+      if (r.status !== "fulfilled" || !r.value.content) continue;
+      const block = `--- File: ${r.value.filePath} ---\n${r.value.content}\n--- End: ${r.value.filePath} ---`;
+      if (totalChars + block.length > CHAR_CAP) break;
+      sections.push(block);
+      totalChars += block.length;
     }
     return sections.join("\n\n");
   }
@@ -247,18 +259,18 @@ export default function IterateInterface() {
     setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const [{ treeText, filePaths }, pageHtml] = await Promise.all([
-        getFileTree(),
-        capturePage(),
-      ]);
+      const [{ treeText, filePaths }, pageHtml, serverLogs] = await Promise.all(
+        [getFileTree(), capturePage(), getLogs()],
+      );
       if (pageHtml) setLivePageContext(pageHtml);
-      const fileContents = await getRelevantFileContents(text, filePaths);
+      const fileContents = await getAllFileContents(filePaths);
       const systemPrompt = buildIterateSystemPrompt(
-        plan.name,
+        plan,
         treeText,
         devUrl,
         pageHtml ?? undefined,
         fileContents || undefined,
+        serverLogs ?? undefined,
       );
 
       const history: ConversationMessage[] = [
