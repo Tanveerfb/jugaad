@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jugaad — component round 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Component round 2: the rest of the core kit. Uses the locked choices — Ember console key,
+   chase-frame inputs, rotor-track tabs — so each option is judged in context. */
+:root{--bg:#061428;--surface:#0c2140;--surface-2:#11294f;--border:#2a5287;--rib:#2a5a92;--text:#e6edf6;--muted:#9db0c7;--accent:#ff8a2b;--ember:#b33f0f;--ember-hi:#c94a14;
+  --aqua:#52d6e6;--danger:#ff6b6b;--focus:#ffb067;--attn:#ff8a2b;--ease:cubic-bezier(.16,1,.3,1);
+  --f-display:"Space Grotesk",system-ui,sans-serif;--f-body:"IBM Plex Sans",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+[data-theme="light"]{--bg:#efe2d2;--surface:#fdf6ee;--surface-2:#f1dfca;--border:#b97a50;--rib:#c08055;--text:#0e2a47;--muted:#4f6075;--accent:#e2691b;--ember:#b33f0f;--ember-hi:#c24614;
+  --aqua:#0f7f8c;--danger:#b42318;--focus:#b4470f;--attn:#a8420e;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{font:15px/1.5 var(--f-body);color:var(--text);background:var(--bg)}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 140px}
+header.page{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
+header.page h1{font-size:34px;font-weight:600;letter-spacing:-.02em} header.page p{margin:6px 0 0;color:var(--muted);max-width:72ch}
+.theme{height:36px;padding:0 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;border-radius:6px}
+section.comp{margin-top:40px;padding-top:24px;border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+section.comp>h2{font-size:24px;font-weight:600} section.comp>p.lead{margin:4px 0 18px;color:var(--muted);max-width:75ch}
+.options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.opt{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;display:grid;gap:14px;align-content:start}
+.opt h3{font-size:17px;font-weight:600;display:flex;gap:8px;align-items:baseline} .opt h3 b{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.opt p{margin:0;color:var(--muted);font-size:13.5px}
+.stage{position:relative;min-height:200px;padding:16px;background:var(--bg);border-radius:3px;overflow:hidden;display:grid;gap:12px;align-content:start}
+.stage.center{place-content:center;justify-items:center;text-align:center}
+small.s{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+
+/* --- locked pieces, reused --- */
+.bk{position:relative;display:inline-flex;align-items:center;gap:10px;height:38px;padding:0 20px 0 14px;border:0;cursor:pointer;font-weight:600;font-size:14px;
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%,0 50%);transition:filter .16s,transform .16s var(--ease),background .16s}
+.bk::before{content:"";width:8px;height:8px;border-radius:50%;flex:none}
+.bk.pri{background:var(--ember);color:#fff} .bk.pri::before{background:var(--accent);box-shadow:0 0 8px var(--accent)} .bk.pri:hover{background:var(--ember-hi)}
+.bk.sec{background:var(--surface-2);color:var(--text)} .bk.sec::before{background:var(--muted)} .bk.sec:hover{filter:brightness(1.18)}
+.bk:active{transform:scale(.97)} .bk:focus-visible{outline:none;box-shadow:inset 0 -3px 0 var(--focus)}
+.bk.sm{height:32px;font-size:13px;padding:0 16px 0 12px}
+.notch{background:var(--border);padding:1px;--c:16px;clip-path:polygon(var(--c) 0,calc(50% - 40px) 0,calc(50% - 30px) 7px,calc(50% + 30px) 7px,calc(50% + 40px) 0,calc(100% - var(--c)) 0,100% var(--c),100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,var(--c) 100%,0 calc(100% - var(--c)),0 var(--c))}
+.notch>.in{background:var(--surface);clip-path:inherit;height:100%}
+.hx{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.roundel{display:grid;place-items:center;width:30px;height:26px;background:var(--surface-2)} .roundel i{width:13px;height:13px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.roundel.ok i{background:var(--aqua);box-shadow:0 0 10px var(--aqua)} .roundel.bad i{background:var(--danger);box-shadow:0 0 10px var(--danger)} .roundel.dim i{background:var(--muted);box-shadow:none;opacity:.55}
+
+/* ========== DIALOGS & SHEETS ========== */
+.backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 70%,transparent);display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.open{opacity:1;pointer-events:auto}
+.dlg{width:min(320px,90%);text-align:left}
+.dlg .in{padding:18px;display:grid;gap:10px}
+.dlg h4{font-size:17px} .dlg p{color:var(--muted);font-size:13.5px;margin:0} .dlg .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+/* D1 — Materialise: the panel fades in with three soft pulses over a rib-lit backdrop */
+.d1 .backdrop{background:repeating-linear-gradient(100deg,transparent 0 38px,color-mix(in srgb,var(--rib) 22%,transparent) 38px 39px),color-mix(in srgb,var(--bg) 75%,transparent)}
+.d1 .backdrop.open .dlg{animation:materialise .7s ease-out}
+@keyframes materialise{0%{opacity:0}22%{opacity:.55}38%{opacity:.2}60%{opacity:.85}76%{opacity:.5}100%{opacity:1}}
+/* D2 — Iris: the dialog opens as a circle growing from the button that asked for it */
+.d2 .backdrop{transition:none}
+.d2 .dlg{clip-path:circle(0 at var(--ox,50%) var(--oy,100%));transition:clip-path .5s var(--ease)}
+.d2 .backdrop.open .dlg{clip-path:circle(150% at var(--ox,50%) var(--oy,100%))}
+/* D3 — Console drawer: a sheet rises from the bottom edge with a hexagonal grip */
+.d3 .backdrop{place-items:end stretch}
+.sheet{background:var(--border);padding:1px 1px 0;clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%,0 18px);transform:translateY(100%);transition:transform .45s var(--ease)}
+.sheet .in{background:var(--surface);clip-path:inherit;padding:10px 18px 18px;display:grid;gap:10px}
+.sheet .grip{justify-self:center;width:34px;height:10px;background:var(--border)}
+.d3 .backdrop.open .sheet{transform:none}
+
+/* ========== TOASTS ========== */
+.toasts{position:absolute;right:12px;bottom:12px;display:grid;gap:8px;justify-items:end;width:calc(100% - 24px)}
+/* T1 — Gallery light: arrives as a line of light along the top that opens into a notched strip */
+.t1{width:100%;max-width:300px;background:var(--border);padding:1px;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);animation:t1in .55s var(--ease) both}
+.t1 .in{background:var(--surface);clip-path:inherit;display:flex;gap:10px;align-items:center;padding:10px 12px;position:relative}
+.t1 .in::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.t1.ok .in::before{background:var(--aqua);box-shadow:0 0 10px var(--aqua)} .t1.bad .in::before{background:var(--danger);box-shadow:0 0 10px var(--danger)}
+@keyframes t1in{from{clip-path:polygon(0 0,100% 0,100% 2px,0 2px)}to{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}}
+.toast-text{display:grid;font-size:13.5px;text-align:left} .toast-text b{font-weight:600} .toast-text span{color:var(--muted);font-size:12.5px}
+.undo{margin-left:auto;border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:4px 6px;white-space:nowrap} .undo:focus-visible{outline:2px solid var(--focus);border-radius:2px}
+/* T2 — Rotor ticket: a mini rotor counts down the time left to undo */
+.t2{width:100%;max-width:300px;display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:3px;animation:t2in .35s var(--ease) both}
+@keyframes t2in{from{transform:translateY(12px);opacity:0}}
+.t2 svg{flex:none;width:34px;height:34px} .t2 .ring{fill:none;stroke:var(--accent);stroke-width:4;stroke-dasharray:100 100;animation:countdown 8s linear forwards} .t2 .track{fill:none;stroke:var(--surface-2);stroke-width:4}
+@keyframes countdown{to{stroke-dashoffset:100}}
+/* T3 — Hex stack: toasts park as small hexagons; hover or focus unfolds the message */
+.t3{position:relative;display:flex;align-items:center;justify-content:flex-end}
+.t3 .cell{width:38px;height:33px;display:grid;place-items:center;background:var(--surface-2);border:0;cursor:pointer;flex:none}
+.t3 .cell i{width:12px;height:12px;border-radius:50%;background:var(--aqua);box-shadow:0 0 8px var(--aqua)}
+.t3 .msg{position:absolute;right:100%;top:50%;translate:0 -50%;white-space:nowrap;background:var(--surface);border:1px solid var(--border);padding:6px 12px;font-size:13px;clip-path:inset(0 0 0 100%);opacity:0;transition:clip-path .35s var(--ease),opacity .2s}
+.t3:hover .msg,.t3:focus-within .msg,.t3.open .msg{clip-path:inset(0);opacity:1}
+
+/* ========== LISTS ========== */
+/* L1 — Batch timeline: the undo journal as a rotor spine; each batch a hexagon node */
+.tl{position:relative;padding-left:30px;display:grid;gap:12px}
+.tl::before{content:"";position:absolute;left:11px;top:4px;bottom:4px;width:2px;background:repeating-linear-gradient(var(--border) 0 4px,transparent 4px 7px)}
+.tl .node{position:relative;display:grid;gap:2px;font-size:13.5px}
+.tl .node::before{content:"";position:absolute;left:-27px;top:3px;width:18px;height:16px;background:var(--accent);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.tl .node.undone::before{background:var(--border)} .tl .node.undone{color:var(--muted)}
+.tl .node b{font-weight:600} .tl .node span{color:var(--muted);font-size:12.5px}
+.tl .node .bk{justify-self:start;margin-top:4px}
+/* L2 — Rib ledger: plain rows; the left edge of each row is a rib that lights on hover and focus */
+.ledger{display:grid;border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+.ledger a{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;color:inherit;text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);
+  box-shadow:inset 3px 0 0 transparent;transition:box-shadow .2s var(--ease),background .2s}
+.ledger a:hover,.ledger a:focus-visible{outline:none;box-shadow:inset 3px 0 0 var(--accent);background:color-mix(in srgb,var(--surface-2) 50%,transparent)}
+.ledger a span:first-child{display:grid} .ledger a b{font-weight:600;font-size:13.5px} .ledger a small{color:var(--muted);font-size:12px}
+/* L3 — Honeycomb index: each row starts with a hexagon carrying its count */
+.hlist{display:grid;gap:8px}
+.hrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:6px 10px 6px 6px;background:var(--surface-2);clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.hrow .num{width:40px;height:35px;display:grid;place-items:center;background:var(--bg);font-family:var(--f-mono);font-size:13px;color:var(--accent)}
+.hrow b{font-weight:600;font-size:13.5px;display:block} .hrow small{color:var(--muted);font-size:12px}
+
+/* ========== EMPTY & LOADING ========== */
+/* E1 — Dormant: a dim roundel breathing slowly; skeletons shimmer left to right like the rib sweep */
+.dormant{width:70px;height:61px;display:grid;place-items:center;background:var(--surface-2)}
+.dormant i{width:26px;height:26px;border-radius:50%;background:var(--muted);opacity:.5;animation:sleep 4s ease-in-out infinite}
+@keyframes sleep{50%{opacity:.85;box-shadow:0 0 14px var(--muted)}}
+.sk{height:12px;border-radius:2px;background:linear-gradient(90deg,var(--surface-2) 0 40%,color-mix(in srgb,var(--rib) 55%,var(--surface-2)) 50%,var(--surface-2) 60% 100%);background-size:250% 100%;animation:shimmer 1.6s linear infinite}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+/* E2 — Missing cell: the empty state is a honeycomb with one cell gone; skeletons materialise in pulses */
+.comb3{position:relative;width:96px;height:72px}
+.comb3 span{position:absolute;width:40px;height:35px;background:var(--surface-2)}
+.comb3 .gap{background:none;outline:1.5px dashed var(--accent);outline-offset:-3px;clip-path:none;border-radius:2px}
+.skp{height:12px;border-radius:2px;background:var(--surface-2);animation:materialise 1.8s ease-out infinite}
+/* E3 — Single light: ribs fan behind one lit cell; skeletons are hexagon-dashed outlines */
+.fan{position:relative;width:130px;height:80px;overflow:hidden}
+.fan i{position:absolute;left:50%;top:-40px;width:1px;height:150px;background:var(--rib);opacity:.5;transform-origin:top}
+.fan .cell{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);width:44px;height:38px;display:grid;place-items:center;background:var(--surface-2)}
+.fan .cell b{width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+.skd{height:14px;border:1.5px dashed var(--border);border-radius:2px;position:relative;overflow:hidden}
+.skd::after{content:"";position:absolute;inset:0;width:30%;background:color-mix(in srgb,var(--accent) 22%,transparent);animation:sweep 1.4s var(--ease) infinite}
+@keyframes sweep{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+.empty-copy h4{font-size:16px} .empty-copy p{font-size:13px;color:var(--muted);margin:4px 0 0;max-width:30ch}
+
+/* ========== SELECTION CONTROLS ========== */
+.ctrls{display:grid;gap:12px}
+.ctrl-row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ctrl-row label{display:inline-flex;gap:8px;align-items:center;cursor:pointer;font-size:14px}
+/* S1 — Hex: checkbox is a small hexagon that fills; the switch is a hex bead on a rail */
+.s1 input[type=checkbox]{appearance:none;width:20px;height:18px;margin:0;background:var(--border);display:grid;place-items:center;cursor:pointer;
+  clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.s1 input[type=checkbox]::before{content:"";width:14px;height:12px;background:var(--bg);clip-path:inherit;transition:all .18s var(--ease)}
+.s1 input[type=checkbox]:checked::before{background:var(--accent);width:20px;height:18px}
+.s1 input[type=checkbox]:indeterminate::before{background:linear-gradient(var(--bg),var(--bg)) center/8px 2px no-repeat,var(--accent);width:20px;height:18px}
+.s1 input[type=checkbox]:focus-visible{background:var(--focus)}
+.s1 input[type=checkbox].sw{appearance:none;width:44px;height:20px;margin:0;border-radius:10px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);position:relative;cursor:pointer}
+.s1 input[type=checkbox].sw::after{content:"";position:absolute;top:2px;left:3px;width:18px;height:16px;background:var(--muted);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);transition:left .2s var(--ease),background .2s}
+.s1 input[type=checkbox].sw:checked::after{left:23px;background:var(--accent)} .s1 input[type=checkbox].sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* S2 — Roundel: checkbox is a roundel whose core lights; the switch is a lever (round 1's idea) */
+.s2 input[type=checkbox]{appearance:none;width:20px;height:20px;margin:0;border-radius:50%;background:radial-gradient(circle,var(--bg) 0 45%,transparent 46%),conic-gradient(var(--border) 0 100%);display:grid;place-items:center;cursor:pointer}
+.s2 input[type=checkbox]::before{content:"";width:8px;height:8px;border-radius:50%;background:transparent;transition:all .2s var(--ease)}
+.s2 input[type=checkbox]:checked::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.s2 input[type=checkbox]:indeterminate::before{width:9px;height:2px;border-radius:1px;background:var(--accent)}
+.s2 input[type=checkbox]:focus-visible{box-shadow:0 0 0 2px var(--focus)}
+.s2 input[type=checkbox].sw{appearance:none;width:30px;height:16px;margin:0;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);position:relative;cursor:pointer}
+.s2 input[type=checkbox].sw::after{content:"";position:absolute;top:3px;left:3px;width:10px;height:10px;border-radius:50%;background:var(--muted);transition:left .2s var(--ease),background .2s,box-shadow .2s}
+.s2 input[type=checkbox].sw:checked::after{left:17px;background:var(--accent);box-shadow:0 0 8px var(--accent)} .s2 input[type=checkbox].sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* S3 — Gallery light: checkbox is a square light that glows when on; the switch is a pair of lights */
+.s3 input[type=checkbox]{appearance:none;width:18px;height:18px;margin:0;border-radius:3px;background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--border);cursor:pointer;display:grid;place-items:center}
+.s3 input[type=checkbox]:checked{background:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 60%,transparent)}
+.s3 input[type=checkbox]:checked::before{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.s3 input[type=checkbox]:indeterminate{background:var(--accent)} .s3 input[type=checkbox]:indeterminate::before{content:"";width:9px;height:2px;background:#fff}
+.s3 input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.s3 .pair{display:inline-flex;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.s3 .pair button{border:0;background:var(--bg);padding:4px 10px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.s3 .pair button::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--surface-2)}
+.s3 .pair button[aria-pressed=true]{background:var(--surface-2);color:var(--text)} .s3 .pair button[aria-pressed=true]::before{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.s3 .pair button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+/* the select's list, per option */
+.lb{display:grid;gap:2px;padding:6px;background:var(--surface);min-width:200px}
+.lb div{padding:7px 10px;font-size:13.5px;display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+.s1 .lb{clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);box-shadow:inset 0 0 0 1px var(--border)}
+.s1 .lb .on{background:var(--surface-2)} .s1 .lb .on::after{content:"";width:12px;height:10px;background:var(--accent);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.s2 .lb{border:1px solid var(--border);border-radius:3px} .s2 .lb .on::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);align-self:center;order:2}
+.s3 .lb{border:1px solid var(--border);border-radius:3px;border-top:2px solid var(--accent)} .s3 .lb .on{box-shadow:inset 3px 0 0 var(--accent);background:color-mix(in srgb,var(--surface-2) 60%,transparent)}
+
+/* switches are checkboxes underneath: undo the checkbox styling that would leak in */
+.s1 input[type=checkbox].sw,.s2 input[type=checkbox].sw{clip-path:none;display:block}
+.s1 input[type=checkbox].sw::before,.s2 input[type=checkbox].sw::before,.s1 input[type=checkbox].sw:checked::before,.s2 input[type=checkbox].sw:checked::before{content:none}
+.s1 input[type=checkbox].sw:focus-visible{background:var(--surface-2)}
+.s2 input[type=checkbox].sw:focus-visible{box-shadow:inset 0 0 0 1px var(--border)}
+@media (max-width:900px){.options{grid-template-columns:1fr}}
+@media (max-width:640px){main{padding:18px 16px 120px} header.page h1{font-size:27px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header class="page">
+    <div>
+      <h1>Component round 2</h1>
+      <p>The rest of the core kit, built with the locked pieces (ember console key, chase-frame inputs). Navigation and cards are already set by the motif: the top bar, the honeycomb and the notched panel. Every demo is live.</p>
+    </div>
+    <button class="theme" id="theme" type="button">Switch to light</button>
+  </header>
+
+  <!-- DIALOGS -->
+  <section class="comp" aria-labelledby="h-d">
+    <h2 id="h-d">Dialogs and sheets</h2>
+    <p class="lead">Shown confirming a plan. Each traps focus, closes on Escape and the backdrop, and returns focus to the button that opened it (Radix behaviour in the build).</p>
+    <div class="options">
+      <div class="opt d1"><h3><b>D1</b> Materialise</h3><p>A notched panel that arrives in three soft pulses over a rib-lit backdrop, the same entrance the module views use.</p>
+        <div class="stage center"><button class="bk pri" type="button" data-open>Apply plan</button>
+          <div class="backdrop" role="presentation"><div class="dlg notch" role="dialog" aria-modal="true" aria-label="Apply plan"><div class="in"><h4>Move 4 files?</h4><p>They go to 2 folders. One batch, undoable from History.</p><div class="row"><button class="bk sec sm" type="button" data-close>Cancel</button><button class="bk pri sm" type="button" data-close>Move 4 files</button></div></div></div></div></div></div>
+      <div class="opt d2"><h3><b>D2</b> Iris</h3><p>The dialog opens as a circle growing out of the button that asked for it, and closes back into it.</p>
+        <div class="stage center"><button class="bk pri" type="button" data-open>Apply plan</button>
+          <div class="backdrop" role="presentation"><div class="dlg notch" role="dialog" aria-modal="true" aria-label="Apply plan"><div class="in"><h4>Move 4 files?</h4><p>They go to 2 folders. One batch, undoable from History.</p><div class="row"><button class="bk sec sm" type="button" data-close>Cancel</button><button class="bk pri sm" type="button" data-close>Move 4 files</button></div></div></div></div></div></div>
+      <div class="opt d3"><h3><b>D3</b> Console drawer</h3><p>A sheet that rises from the bottom edge with a hexagonal grip, natural on a phone and roomy enough for longer forms.</p>
+        <div class="stage center"><button class="bk pri" type="button" data-open>Apply plan</button>
+          <div class="backdrop" role="presentation"><div class="sheet" role="dialog" aria-modal="true" aria-label="Apply plan"><div class="in"><span class="grip hx" aria-hidden="true"></span><h4>Move 4 files?</h4><p style="margin:0;color:var(--muted);font-size:13.5px">They go to 2 folders. One batch, undoable from History.</p><div style="display:flex;gap:8px;justify-content:flex-end"><button class="bk sec sm" type="button" data-close>Cancel</button><button class="bk pri sm" type="button" data-close>Move 4 files</button></div></div></div></div></div></div>
+    </div>
+  </section>
+
+  <!-- TOASTS -->
+  <section class="comp" aria-labelledby="h-t">
+    <h2 id="h-t">Toasts</h2>
+    <p class="lead">"Moved 4 files" with an undo, plus success and error. Press the button to send one.</p>
+    <div class="options">
+      <div class="opt"><h3><b>T1</b> Gallery light</h3><p>Arrives as a line of light along the top, which opens into a notched strip. The light's colour carries the status, next to the words.</p>
+        <div class="stage" style="min-height:220px"><button class="bk sec sm" type="button" data-toast="t1" style="justify-self:start">Send toast</button><div class="toasts" aria-live="polite"></div></div></div>
+      <div class="opt"><h3><b>T2</b> Rotor ticket</h3><p>A mini rotor counts down the time left to undo, then the toast leaves on its own.</p>
+        <div class="stage" style="min-height:220px"><button class="bk sec sm" type="button" data-toast="t2" style="justify-self:start">Send toast</button><div class="toasts" aria-live="polite"></div></div></div>
+      <div class="opt"><h3><b>T3</b> Hex stack</h3><p>Toasts park as small hexagons in the corner and unfold their message on hover or focus, so they stay out of the way while you work.</p>
+        <div class="stage" style="min-height:220px"><button class="bk sec sm" type="button" data-toast="t3" style="justify-self:start">Send toast</button><div class="toasts" aria-live="polite"></div></div></div>
+    </div>
+  </section>
+
+  <!-- LISTS -->
+  <section class="comp" aria-labelledby="h-l">
+    <h2 id="h-l">Lists</h2>
+    <p class="lead">Shown as the Organiser's history of applied batches, the list you undo from. Tables in plain zones keep the round 1 table look.</p>
+    <div class="options">
+      <div class="opt"><h3><b>L1</b> Batch timeline</h3><p>Batches hang off a dashed rotor spine as lit hexagon nodes, and an undone batch goes dark.</p>
+        <div class="stage"><div class="tl">
+          <div class="node"><b>Moved 4 files</b><span>Today 14:02 · Invoices, Tax</span><button class="bk sec sm" type="button">Undo batch</button></div>
+          <div class="node"><b>Moved 12 files</b><span>Yesterday 09:41 · Photos — 2024</span></div>
+          <div class="node undone"><b>Moved 3 files</b><span>Mon 18:20 · undone</span></div></div></div></div>
+      <div class="opt"><h3><b>L2</b> Rib ledger</h3><p>Plain rows. The row's left edge is a rib that lights on hover and keyboard focus.</p>
+        <div class="stage" style="padding:8px"><nav class="ledger" aria-label="History (L2)">
+          <a href="#"><span><b>Moved 4 files</b><small>Today 14:02 · Invoices, Tax</small></span><small class="mono">4</small></a>
+          <a href="#"><span><b>Moved 12 files</b><small>Yesterday 09:41 · Photos — 2024</small></span><small class="mono">12</small></a>
+          <a href="#"><span><b>Moved 3 files</b><small>Mon 18:20 · undone</small></span><small class="mono">3</small></a></nav></div></div>
+      <div class="opt"><h3><b>L3</b> Honeycomb index</h3><p>Each row starts with a hexagon carrying its count, a cut corner closing it.</p>
+        <div class="stage"><div class="hlist">
+          <div class="hrow"><span class="num hx">4</span><span><b>Moved 4 files</b><small>Today 14:02 · Invoices, Tax</small></span><button class="bk sec sm" type="button">Undo</button></div>
+          <div class="hrow"><span class="num hx">12</span><span><b>Moved 12 files</b><small>Yesterday 09:41</small></span></div>
+          <div class="hrow" style="opacity:.6"><span class="num hx">3</span><span><b>Moved 3 files</b><small>Mon 18:20 · undone</small></span></div></div></div></div>
+    </div>
+  </section>
+
+  <!-- EMPTY & LOADING -->
+  <section class="comp" aria-labelledby="h-e">
+    <h2 id="h-e">Empty and loading states</h2>
+    <p class="lead">An empty state that says what to do next, and the skeleton shown while a list loads. Skeletons match the final layout.</p>
+    <div class="options">
+      <div class="opt"><h3><b>E1</b> Dormant</h3><p>A dim roundel breathing slowly. Skeletons shimmer left to right, like the light sweeping the ribs.</p>
+        <div class="stage center"><span class="dormant hx" aria-hidden="true"><i></i></span><div class="empty-copy"><h4>No batches yet</h4><p>Applied plans appear here, each one undoable.</p></div></div>
+        <div class="stage" style="min-height:0" aria-hidden="true"><div class="sk" style="width:70%"></div><div class="sk" style="width:45%"></div><div class="sk" style="width:60%"></div></div></div>
+      <div class="opt"><h3><b>E2</b> Missing cell</h3><p>The honeycomb with one cell gone, outlined where it belongs. Skeletons materialise in pulses.</p>
+        <div class="stage center"><span class="comb3" aria-hidden="true"><span class="hx" style="left:0;top:18px"></span><span class="hx" style="left:28px;top:0"></span><svg class="gap-hex" style="position:absolute;left:28px;top:36px;width:40px;height:35px;overflow:visible" viewBox="0 0 40 35"><path d="M10.5 1H29.5L39 17.5L29.5 34H10.5L1 17.5Z" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="3 3"/></svg><span class="hx" style="left:56px;top:18px"></span></span><div class="empty-copy"><h4>No batches yet</h4><p>Applied plans appear here, each one undoable.</p></div></div>
+        <div class="stage" style="min-height:0" aria-hidden="true"><div class="skp" style="width:70%"></div><div class="skp" style="width:45%;animation-delay:.15s"></div><div class="skp" style="width:60%;animation-delay:.3s"></div></div></div>
+      <div class="opt"><h3><b>E3</b> Single light</h3><p>Ribs fan down onto one lit cell. Skeletons are dashed outlines with a light passing through.</p>
+        <div class="stage center"><span class="fan" aria-hidden="true" id="fan"><span class="cell hx"><b></b></span></span><div class="empty-copy"><h4>No batches yet</h4><p>Applied plans appear here, each one undoable.</p></div></div>
+        <div class="stage" style="min-height:0" aria-hidden="true"><div class="skd" style="width:70%"></div><div class="skd" style="width:45%"></div><div class="skd" style="width:60%"></div></div></div>
+    </div>
+  </section>
+
+  <!-- SELECTION -->
+  <section class="comp" aria-labelledby="h-s">
+    <h2 id="h-s">Selection controls</h2>
+    <p class="lead">Checkbox (on, mixed, off), switch, and the select's open list, as one family each. Click them; they work with Space too.</p>
+    <div class="options">
+      <div class="opt s1"><h3><b>S1</b> Hex</h3><p>The checkbox is a small hexagon that fills; the switch is a hexagonal bead on a rail; the chosen list item carries a hexagon.</p>
+        <div class="stage ctrls"><div class="ctrl-row"><label><input type="checkbox" checked> On</label><label><input type="checkbox" class="mixed"> Mixed</label><label><input type="checkbox"> Off</label></div>
+          <div class="ctrl-row"><label><input type="checkbox" class="sw" role="switch" checked> Include subfolders</label></div>
+          <div class="lb" role="listbox" aria-label="Category (S1)"><div role="option">All categories</div><div role="option" class="on" aria-selected="true">Invoices</div><div role="option">Photos — 2024</div></div></div></div>
+      <div class="opt s2"><h3><b>S2</b> Roundel</h3><p>The checkbox is a roundel whose core lights; the switch is a small lever; the chosen item carries a lit roundel.</p>
+        <div class="stage ctrls"><div class="ctrl-row"><label><input type="checkbox" checked> On</label><label><input type="checkbox" class="mixed"> Mixed</label><label><input type="checkbox"> Off</label></div>
+          <div class="ctrl-row"><label><input type="checkbox" class="sw" role="switch" checked> Include subfolders</label></div>
+          <div class="lb" role="listbox" aria-label="Category (S2)"><div role="option">All categories</div><div role="option" class="on" aria-selected="true">Invoices</div><div role="option">Photos — 2024</div></div></div></div>
+      <div class="opt s3"><h3><b>S3</b> Gallery light</h3><p>The checkbox is a square light that glows when on; a two-way choice is a pair of lit buttons; the chosen item is marked with a lit rib.</p>
+        <div class="stage ctrls"><div class="ctrl-row"><label><input type="checkbox" checked> On</label><label><input type="checkbox" class="mixed"> Mixed</label><label><input type="checkbox"> Off</label></div>
+          <div class="ctrl-row"><span style="font-size:14px">Subfolders</span><span class="pair" role="group" aria-label="Subfolders"><button type="button" aria-pressed="true">Include</button><button type="button" aria-pressed="false">Skip</button></span></div>
+          <div class="lb" role="listbox" aria-label="Category (S3)"><div role="option">All categories</div><div role="option" class="on" aria-selected="true">Invoices</div><div role="option">Photos — 2024</div></div></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* dialogs */
+document.querySelectorAll("[data-open]").forEach(btn=>{
+  const stage=btn.closest(".stage"),bd=stage.querySelector(".backdrop"),dlg=bd.firstElementChild;
+  const close=()=>{bd.classList.remove("open");btn.focus()};
+  btn.addEventListener("click",()=>{const sr=stage.getBoundingClientRect(),br=btn.getBoundingClientRect(),dr=dlg.getBoundingClientRect();
+    dlg.style.setProperty("--ox",`${br.left+br.width/2-dr.left}px`);dlg.style.setProperty("--oy",`${br.top+br.height/2-dr.top}px`);
+    bd.classList.add("open");dlg.querySelector("[data-close]").focus()});
+  bd.addEventListener("click",e=>{if(e.target===bd)close()});
+  bd.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",close));
+  bd.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+});
+/* toasts */
+const toast={
+  t1:(k)=>{const d=[["Moved 4 files","Invoices, Tax · undo for 8 s",""],["Folder added","Downloads is now visible","ok"],["Couldn't move 1 file","setup.exe is open in another program","bad"]][k%3];
+    return `<div class="t1 ${d[2]}"><div class="in"><span class="toast-text"><b>${d[0]}</b><span>${d[1]}</span></span>${k%3===0?'<button class="undo" type="button">Undo</button>':""}</div></div>`},
+  t2:()=>`<div class="t2"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="track" cx="18" cy="18" r="14"/><circle class="ring" cx="18" cy="18" r="14" pathLength="100" transform="rotate(-90 18 18)"/></svg><span class="toast-text"><b>Moved 4 files</b><span>Invoices, Tax</span></span><button class="undo" type="button">Undo</button></div>`,
+  t3:()=>`<div class="t3 open"><button class="cell hx" type="button" aria-label="Moved 4 files"><i></i></button><span class="msg">Moved 4 files · <button class="undo" type="button" style="padding:0">Undo</button></span></div>`,
+};
+const count={t1:0,t2:0,t3:0};
+document.querySelectorAll("[data-toast]").forEach(b=>b.addEventListener("click",()=>{const kind=b.dataset.toast,box=b.parentElement.querySelector(".toasts");
+  box.insertAdjacentHTML("beforeend",toast[kind](count[kind]++));const el=box.lastElementChild;
+  if(kind==="t3")setTimeout(()=>el.classList.remove("open"),1800);
+  setTimeout(()=>el.remove(),kind==="t2"?8000:6000);}));
+/* fan ribs */
+const fan=document.getElementById("fan");for(let i=0;i<9;i++){const r=document.createElement("i");r.style.transform=`rotate(${-48+i*12}deg)`;fan.prepend(r)}
+/* indeterminate checkboxes */
+document.querySelectorAll("input.mixed").forEach(c=>c.indeterminate=true);
+/* gallery pair */
+document.querySelectorAll(".pair").forEach(p=>p.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;p.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))}));
+document.querySelectorAll(".ledger a").forEach(a=>a.addEventListener("click",e=>e.preventDefault()));
+const tb=document.getElementById("theme");tb.addEventListener("click",()=>{const l=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=l?"light":"dark";tb.textContent=l?"Switch to dark":"Switch to light"});
+</script>
+</body>
+</html>

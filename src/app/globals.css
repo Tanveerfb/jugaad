@@ -1,0 +1,319 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Jugaad design tokens — the "Honeycomb console" motif. Values come from the locked mockup
+ * (docs/design/motif.html) and are recorded in design-system.md; change them there first.
+ * shadcn's variable names are kept so every primitive inherits the motif; the motif adds
+ * `working`, `attention`, `rib`, `surface-2`, shapes and motion.
+ */
+
+/* Dark is the default theme; light is opt-in via data-theme="light" on <html>. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* motif additions */
+  --color-surface-2: var(--surface-2);
+  --color-working: var(--working);
+  --color-attention: var(--attention);
+  --color-rib: var(--rib);
+  --color-ember: var(--ember);
+  --color-ember-hover: var(--ember-hover);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* shadcn radius scale kept small: the motif's corners are chamfers, not curves */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --ease-console: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-chase: chase 3.6s linear infinite;
+  --animate-chase-fast: chase 1.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  --animate-breathe: breathe 3.2s ease-in-out infinite;
+  --animate-rotor-cw: spin 30s linear infinite;
+  --animate-rotor-ccw: spin 22s linear infinite reverse;
+  --animate-pulse-head: pulse-head 1.6s ease-in-out infinite;
+  --animate-wave: wave 0.9s linear infinite;
+  --animate-materialise: materialise 680ms ease-out;
+  --animate-materialise-loop: materialise 1.8s ease-out infinite;
+  --animate-blink: blink 0.7s steps(2) infinite;
+  --animate-sweep: sweep 1.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  --animate-iris-in: iris-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-iris-out: iris-out 320ms cubic-bezier(0.7, 0, 0.84, 0) both;
+
+  @keyframes chase {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: -100; }
+  }
+  @keyframes breathe {
+    50% { box-shadow: 0 0 20px var(--primary); transform: scale(1.08); }
+  }
+  @keyframes blink {
+    50% { opacity: 0.25; }
+  }
+  /* the console key loading bar running along the base */
+  @keyframes sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+  }
+  /* dialogs open as a circle growing out of the button that asked (--iris-x/--iris-y) */
+  @keyframes iris-in {
+    from { clip-path: circle(0 at var(--iris-x, 50%) var(--iris-y, 50%)); }
+    to { clip-path: circle(150% at var(--iris-x, 50%) var(--iris-y, 50%)); }
+  }
+  @keyframes iris-out {
+    from { clip-path: circle(150% at var(--iris-x, 50%) var(--iris-y, 50%)); }
+    to { clip-path: circle(0 at var(--iris-x, 50%) var(--iris-y, 50%)); }
+  }
+  @keyframes pulse-head {
+    50% { opacity: 0.45; }
+  }
+  @keyframes wave {
+    to { stroke-dashoffset: -14; }
+  }
+  /* three soft opacity pulses; the element is visible by default and this only enhances it */
+  @keyframes materialise {
+    0% { opacity: 0; }
+    22% { opacity: 0.55; }
+    38% { opacity: 0.2; }
+    60% { opacity: 0.85; }
+    76% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+}
+
+:root,
+[data-theme="dark"] {
+  /* 2012 console room */
+  --background: #061428;
+  --foreground: #e6edf6;
+  --card: #0c2140;
+  --card-foreground: #e6edf6;
+  --popover: #11294f;
+  --popover-foreground: #e6edf6;
+  --primary: #ff8a2b; /* Gallifrey orange */
+  --primary-foreground: #1c0b00;
+  --secondary: #11294f;
+  --secondary-foreground: #e6edf6;
+  --muted: #11294f;
+  --muted-foreground: #9db0c7; /* steel */
+  --accent: #11294f;
+  --accent-foreground: #e6edf6;
+  --destructive: #ff6b6b;
+  --border: #2a5287;
+  --input: #2a5287;
+  --ring: #ffb067;
+  --surface-2: #11294f;
+  --working: #52d6e6;
+  --attention: #ff8a2b;
+  --rib: #2a5a92;
+  --ember: #b33f0f; /* primary button body: white text 5.8:1 */
+  --ember-hover: #c94a14;
+  --radius: 0.375rem;
+
+  /* shapes */
+  --chamfer: 18px;
+  --chamfer-sm: 7px;
+  /* console key: a hexagon stretched into a key — --tip is the depth of each pointed end */
+  --tip: 12px;
+  --shape-hex: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+
+  /* motion */
+  --duration-fast: 160ms;
+  --duration: 240ms;
+  --duration-open: 520ms;
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  /* 2010 room, read as copper */
+  --background: #efe2d2;
+  --foreground: #0e2a47; /* TARDIS-blue ink */
+  --card: #fdf6ee;
+  --card-foreground: #0e2a47;
+  --popover: #f1dfca;
+  --popover-foreground: #0e2a47;
+  --primary: #e2691b;
+  --primary-foreground: #1c0b00;
+  --secondary: #f1dfca;
+  --secondary-foreground: #0e2a47;
+  --muted: #f1dfca;
+  --muted-foreground: #4f6075;
+  --accent: #f1dfca;
+  --accent-foreground: #0e2a47;
+  --destructive: #b42318;
+  --border: #b97a50; /* copper */
+  --input: #b97a50;
+  --ring: #b4470f;
+  --surface-2: #f1dfca;
+  --working: #0f7f8c;
+  --attention: #a8420e;
+  --rib: #c08055;
+  --ember: #b33f0f;
+  --ember-hover: #c24614;
+
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+}
+
+/*
+ * Notched panel — chamfered corners and a notch at the top centre. Drawn as two layers with
+ * the same clip-path (outer = border colour, inner inset 1px) because clip-path cuts away a
+ * CSS border on the diagonals.
+ */
+@utility shape-notched {
+  clip-path: polygon(
+    var(--chamfer) 0, calc(50% - 46px) 0, calc(50% - 34px) 8px, calc(50% + 34px) 8px,
+    calc(50% + 46px) 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer),
+    100% calc(100% - var(--chamfer)), calc(100% - var(--chamfer)) 100%, var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer)), 0 var(--chamfer)
+  );
+}
+@utility shape-chamfered {
+  clip-path: polygon(
+    var(--chamfer) 0, calc(100% - var(--chamfer)) 0, 100% var(--chamfer),
+    100% calc(100% - var(--chamfer)), calc(100% - var(--chamfer)) 100%, var(--chamfer) 100%,
+    0 calc(100% - var(--chamfer)), 0 var(--chamfer)
+  );
+}
+/* buttons and inputs: two cut corners, top-left and bottom-right */
+@utility shape-cut {
+  clip-path: polygon(
+    var(--chamfer-sm) 0, 100% 0, 100% calc(100% - var(--chamfer-sm)),
+    calc(100% - var(--chamfer-sm)) 100%, 0 100%, 0 var(--chamfer-sm)
+  );
+}
+@utility shape-key {
+  clip-path: polygon(
+    var(--tip) 0, calc(100% - var(--tip)) 0, 100% 50%, calc(100% - var(--tip)) 100%,
+    var(--tip) 100%, 0 50%
+  );
+}
+@utility shape-hex {
+  clip-path: var(--shape-hex);
+}
+
+/*
+ * Bigger on the inside: a module's hexagon morphs into its notched panel. React's
+ * <ViewTransition share="module-morph"> puts the pair in the `module-morph` class. Both shapes
+ * are 8-point polygons so clip-path interpolates point to point.
+ */
+::view-transition-group(.module-morph) {
+  animation-duration: var(--duration-open);
+  animation-timing-function: var(--ease-console);
+}
+::view-transition-old(.module-morph) {
+  animation: vt-fade-out var(--duration-open) var(--ease-console) both;
+}
+::view-transition-new(.module-morph) {
+  animation: vt-hex-to-panel var(--duration-open) var(--ease-console) both;
+}
+html:active-view-transition-type(module-close)::view-transition-old(.module-morph) {
+  animation: vt-panel-to-hex var(--duration-open) var(--ease-console) both;
+}
+html:active-view-transition-type(module-close)::view-transition-new(.module-morph) {
+  animation: vt-fade-in var(--duration-open) var(--ease-console) both;
+}
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; }
+}
+@keyframes vt-hex-to-panel {
+  from {
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 100% 50%, 75% 100%, 25% 100%, 0 50%, 0 50%);
+    opacity: 0.3;
+  }
+  to {
+    clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
+    opacity: 1;
+  }
+}
+@keyframes vt-panel-to-hex {
+  from {
+    clip-path: polygon(18px 0, calc(100% - 18px) 0, 100% 18px, 100% calc(100% - 18px), calc(100% - 18px) 100%, 18px 100%, 0 calc(100% - 18px), 0 18px);
+    opacity: 1;
+  }
+  to {
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 100% 50%, 75% 100%, 25% 100%, 0 50%, 0 50%);
+    opacity: 0.3;
+  }
+}
+
+/*
+ * Keyframes used from inline styles, outside @theme: Tailwind only emits @theme keyframes that
+ * an --animate-* variable references, so these would otherwise be dropped.
+ */
+/* a toast's rotor ring empties over its lifetime (duration set per toast) */
+@keyframes countdown {
+  to { stroke-dashoffset: 100px; }
+}
+
+/* the light sweeping across the background ribs */
+@keyframes rib-chase {
+  0%, 6% { opacity: 0.16; }
+  3% { opacity: 0.5; stroke: var(--primary); }
+}
+
+/* Reduced motion: every animation off; nothing essential is carried by motion alone. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

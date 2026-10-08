@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jugaad: locked component kit</title>
+<style>
+  /* The record of the component round (project-rules §SHADCN): which design was locked for
+     each core component, and the round file that shows it live in every state. Committed,
+     never deployed. Built code lives in src/components/ui/ — see components.md. */
+  :root{--bg:#061428;--surface:#0c2140;--border:#2a5287;--text:#e6edf6;--muted:#9db0c7;--accent:#ff8a2b;color-scheme:dark}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+  main{max-width:1100px;margin:0 auto;padding:28px 20px 80px}
+  h1{font-size:30px;margin:0 0 4px} p.lead{color:var(--muted);margin:0 0 22px;max-width:72ch}
+  table{width:100%;border-collapse:collapse;margin-bottom:28px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-size:13px} td b{color:var(--accent);font-family:ui-monospace,monospace;font-size:12px}
+  a{color:var(--accent)}
+  h2{font-size:20px;margin:30px 0 8px}
+  iframe{width:100%;height:760px;border:1px solid var(--border);background:var(--bg)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Locked component kit</h1>
+  <p class="lead">Chosen by the owner on 2026-10-09 through three mockup rounds, two or three options per component. Each round file below shows the options live, in every state, in dark and light. Reasons and the options that lost are in <code>decisions.md</code>.</p>
+  <table>
+    <thead><tr><th>Component</th><th>Locked design</th><th>Round</th><th>Built as</th></tr></thead>
+    <tbody>
+      <tr><td>Buttons</td><td><b>A1</b> Console key, Ember: burnt-orange key, white text, a light on the left</td><td><a href="rounds/round-1b.html">1b</a></td><td><code>ui/button.tsx</code></td></tr>
+      <tr><td>Inputs and selects</td><td><b>I1</b> Chase frame: a light runs once round the edge on focus</td><td><a href="rounds/round-1b.html">1b</a></td><td><code>ui/input.tsx</code>, <code>ui/select.tsx</code>, <code>ui/chase-frame.tsx</code></td></tr>
+      <tr><td>Tabs</td><td><b>B</b> Rotor track: dashed rail, a bead travels to the active tab</td><td><a href="rounds/round-1.html">1</a></td><td><code>ui/tabs.tsx</code></td></tr>
+      <tr><td>Signature: plan review</td><td><b>B</b> Destination bays: one notched bay per destination folder</td><td><a href="rounds/round-1.html">1</a></td><td>Built with the Organiser (phase 1)</td></tr>
+      <tr><td>Dialogs</td><td><b>D2</b> Iris: grows out of the button that opened it</td><td><a href="rounds/round-2.html">2</a></td><td><code>ui/dialog.tsx</code></td></tr>
+      <tr><td>Toasts</td><td><b>T2</b> Rotor ticket: a mini rotor counts down the time to undo</td><td><a href="rounds/round-2.html">2</a></td><td><code>ui/toaster.tsx</code>, <code>stores/toast-store.ts</code></td></tr>
+      <tr><td>Lists</td><td><b>L1</b> Batch timeline: dashed spine, hexagon node per item</td><td><a href="rounds/round-2.html">2</a></td><td><code>ui/timeline.tsx</code></td></tr>
+      <tr><td>Empty and loading</td><td><b>E2</b> Missing cell: honeycomb with one cell outlined; skeletons materialise</td><td><a href="rounds/round-2.html">2</a></td><td><code>ui/empty-state.tsx</code>, <code>ui/skeleton.tsx</code></td></tr>
+      <tr><td>Selection controls</td><td><b>S1</b> Hex: hexagon checkbox, hex bead switch, hexagon on the chosen item</td><td><a href="rounds/round-2.html">2</a></td><td><code>ui/checkbox.tsx</code>, <code>ui/switch.tsx</code>, <code>ui/select.tsx</code></td></tr>
+      <tr><td>Navigation and cards</td><td>Set by the locked motif: top bar, honeycomb, notched panel</td><td><a href="motif.html">motif</a></td><td><code>top-bar.tsx</code>, <code>motif/</code></td></tr>
+      <tr><td>Footer</td><td>None (decided 2026-10-09)</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Round 1: buttons, inputs, tabs, signature</h2>
+  <iframe src="rounds/round-1.html" title="Component round 1"></iframe>
+  <h2>Round 1b: console key contrast, new inputs</h2>
+  <iframe src="rounds/round-1b.html" title="Component round 1b"></iframe>
+  <h2>Round 2: dialogs, toasts, lists, empty and loading, selection</h2>
+  <iframe src="rounds/round-2.html" title="Component round 2"></iframe>
+</main>
+</body>
+</html>

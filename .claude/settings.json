@@ -1,0 +1,6 @@
+{
+  "extraKnownMarketplaces": {
+    "tanveerfb": { "source": { "source": "github", "repo": "Tanveerfb/fleet-standards" } }
+  },
+  "enabledPlugins": { "fleet@tanveerfb": true }
+}

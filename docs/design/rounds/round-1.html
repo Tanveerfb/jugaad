@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jugaad — component round 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Component round 1 (project-rules §SHADCN 3.4.0). Tokens = the locked motif (design-system.md).
+   Every component shown live (hover / press / focus with the keyboard) and as a states strip. */
+:root {
+  --bg:#061428; --surface:#0c2140; --surface-2:#11294f; --border:#2a5287; --rib:#2a5a92;
+  --text:#e6edf6; --muted:#9db0c7; --accent:#ff8a2b; --ink:#1c0b00; --aqua:#52d6e6;
+  --danger:#ff6b6b; --focus:#ffb067; --attn:#ff8a2b;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --f-display:"Space Grotesk",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg:#efe2d2; --surface:#fdf6ee; --surface-2:#f1dfca; --border:#b97a50; --rib:#c08055;
+  --text:#0e2a47; --muted:#4f6075; --accent:#e2691b; --aqua:#0f7f8c; --danger:#b42318; --focus:#b4470f; --attn:#a8420e;
+  color-scheme: light;
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font:15px/1.5 var(--f-body);color:var(--text);background:var(--bg)}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 120px}
+header.page{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+header.page h1{font-size:34px;font-weight:600;letter-spacing:-.02em}
+header.page p{margin:6px 0 0;color:var(--muted);max-width:70ch}
+.theme{height:36px;padding:0 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;border-radius:6px}
+
+section.comp{margin-top:44px;padding-top:24px;border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+section.comp>h2{font-size:24px;font-weight:600}
+section.comp>p.lead{margin:4px 0 18px;color:var(--muted);max-width:75ch}
+.options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.opt{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;display:grid;gap:14px;align-content:start}
+.opt h3{font-size:17px;font-weight:600;display:flex;gap:8px;align-items:baseline}
+.opt h3 b{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.opt p{margin:0;color:var(--muted);font-size:13.5px}
+.live{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;background:var(--bg);border-radius:3px}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.state{display:grid;gap:6px;justify-items:start}
+.state small{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.wide .options{grid-template-columns:1fr}
+
+/* ============ BUTTONS ============ */
+/* A — Console key: elongated hexagon, a roundel core lights on the left */
+.bk{--h:40px;position:relative;display:inline-flex;align-items:center;gap:10px;height:var(--h);padding:0 22px 0 16px;border:0;cursor:pointer;
+  font-weight:600;font-size:14px;background:var(--surface-2);color:var(--text);
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%,0 50%);
+  transition:filter .16s,transform .16s var(--ease),background .16s}
+.bk::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--muted);box-shadow:none;transition:all .2s var(--ease)}
+.bk.primary{background:var(--accent);color:var(--ink)}
+.bk.primary::before{background:#fff3e6;box-shadow:0 0 8px #fff3e6}
+.bk:hover,.bk.is-hover{filter:brightness(1.14)} .bk:hover::before,.bk.is-hover::before{box-shadow:0 0 10px var(--accent);background:var(--accent)}
+.bk.primary:hover::before,.bk.primary.is-hover::before{background:#fff;box-shadow:0 0 12px #fff}
+.bk:active,.bk.is-active{transform:scale(.97);filter:brightness(.92)}
+.bk:focus-visible,.bk.is-focus{outline:none;background-image:linear-gradient(var(--focus),var(--focus));background-size:100% 3px;background-position:bottom;background-repeat:no-repeat}
+.bk.is-loading{pointer-events:none}
+.bk.is-loading::before{animation:blink .7s steps(2) infinite}
+.bk.is-loading::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:30%;background:currentColor;opacity:.6;animation:sweep 1.1s var(--ease) infinite}
+.bk:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)} .bk:disabled::before{background:transparent;border:1.5px dashed var(--muted)}
+.bk.danger{background:color-mix(in srgb,var(--danger) 18%,var(--surface-2));color:var(--danger)} .bk.danger::before{background:var(--danger)}
+@keyframes blink{50%{opacity:.2}} @keyframes sweep{from{left:-30%}to{left:100%}}
+
+/* B — Lever: a throw-switch inside the button; pressing throws the lever */
+.bl{position:relative;display:inline-flex;align-items:center;gap:12px;height:40px;padding:0 16px 0 10px;border:1px solid var(--border);cursor:pointer;
+  border-radius:3px;background:linear-gradient(180deg,color-mix(in srgb,var(--surface-2) 70%,white 4%),var(--surface-2));font-weight:600;font-size:14px;
+  box-shadow:inset 0 -2px 0 color-mix(in srgb,black 30%,transparent);transition:transform .16s var(--ease),box-shadow .16s}
+.bl .lv{position:relative;width:26px;height:14px;border-radius:7px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--border)}
+.bl .lv::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:var(--muted);transition:left .22s var(--ease),background .2s,box-shadow .2s}
+.bl.primary .lv::after{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.bl.primary{border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+.bl:hover .lv::after,.bl.is-hover .lv::after{left:6px}
+.bl:active,.bl.is-active{transform:translateY(1px);box-shadow:inset 0 1px 0 color-mix(in srgb,black 30%,transparent)}
+.bl:active .lv::after,.bl.is-active .lv::after{left:14px;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.bl:focus-visible,.bl.is-focus{outline:2px solid var(--focus);outline-offset:3px}
+.bl.is-loading .lv::after{animation:throw .8s var(--ease) infinite alternate;background:var(--aqua);box-shadow:0 0 8px var(--aqua)}
+@keyframes throw{to{left:14px}}
+.bl:disabled{opacity:.45;cursor:not-allowed} .bl:disabled .lv::after{background:transparent;border:1.5px dashed var(--muted);width:7px;height:7px}
+.bl.danger .lv::after{background:var(--danger);box-shadow:0 0 8px var(--danger)} .bl.danger{color:var(--danger)}
+
+/* C — Roundel stud: a glowing roundel overlaps the left edge; loading turns it into a mini rotor */
+.br{position:relative;display:inline-flex;align-items:center;height:38px;margin-left:16px;padding:0 18px 0 30px;border:0;cursor:pointer;font-weight:600;font-size:14px;
+  background:var(--surface-2);color:var(--text);clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,0 100%);overflow:visible}
+.br-wrap{position:relative;display:inline-flex;align-items:center}
+.br-wrap .stud{position:absolute;left:0;top:50%;width:34px;height:34px;transform:translateY(-50%);border-radius:50%;z-index:1;pointer-events:none;
+  background:radial-gradient(circle,var(--surface) 0 40%,transparent 41%),conic-gradient(var(--border) 0 100%);display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+.br-wrap .stud::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--muted);transition:all .2s var(--ease)}
+.br-wrap.primary .br{background:var(--accent);color:var(--ink)} .br-wrap.primary .stud::after{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.br-wrap:hover .stud::after,.br-wrap.is-hover .stud::after{transform:scale(1.25);box-shadow:0 0 14px var(--accent);background:var(--accent)}
+.br-wrap:hover .br,.br-wrap.is-hover .br{filter:brightness(1.12)}
+.br-wrap:active .br,.br-wrap.is-active .br{filter:brightness(.9)} .br-wrap:active .stud,.br-wrap.is-active .stud{transform:translateY(-50%) rotate(30deg)}
+.br-wrap .br:focus-visible,.br-wrap.is-focus .br{outline:none} .br-wrap:has(.br:focus-visible) .stud,.br-wrap.is-focus .stud{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus)}
+.br-wrap.is-loading .stud{background:radial-gradient(circle,var(--surface) 0 40%,transparent 41%),conic-gradient(var(--accent) 0 30%,var(--border) 30% 100%);animation:spin 1s linear infinite}
+.br-wrap.is-loading .stud::after{animation:none}
+.br-wrap.is-disabled{opacity:.45} .br-wrap.is-disabled .br{cursor:not-allowed} .br-wrap.is-disabled .stud::after{background:transparent;border:1.5px dashed var(--muted)}
+.br-wrap.danger .stud::after{background:var(--danger);box-shadow:0 0 10px var(--danger)} .br-wrap.danger .br{color:var(--danger)}
+@keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
+
+/* ============ INPUTS & SELECTS ============ */
+.fld{display:grid;gap:6px;width:100%}
+/* A — Gauge slot: label rides in a hex tab fixed to the field; focus lights a rail */
+.gs{position:relative;padding-top:13px;width:100%}
+.gs label{position:absolute;top:0;left:10px;z-index:1;font-size:11.5px;font-weight:600;padding:2px 12px;background:var(--surface-2);color:var(--muted);
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%);transition:color .16s,background .16s}
+.gs input,.gs .sel{width:100%;height:42px;padding:6px 14px 0;border:0;background:var(--bg);color:var(--text);box-shadow:inset 0 0 0 1px var(--border);border-radius:2px;outline:none}
+.gs::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s var(--ease)}
+.gs:focus-within::after,.gs.is-focus::after{transform:scaleX(1)} .gs:focus-within label,.gs.is-focus label{background:var(--accent);color:var(--ink)}
+.gs:hover input,.gs.is-hover input{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 50%,var(--border))}
+.gs.is-error input{box-shadow:inset 0 0 0 1px var(--danger)} .gs.is-error::after{background:var(--danger);transform:scaleX(1)} .gs.is-error label{background:var(--danger);color:#fff}
+.gs.is-disabled{opacity:.5} .gs.is-disabled input{cursor:not-allowed;background:repeating-linear-gradient(135deg,var(--bg) 0 6px,var(--surface) 6px 7px)}
+.gs .sel{display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left}
+.gs .sel i{width:11px;height:10px;background:var(--muted);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+
+/* B — Rib rail: no box; 18 rib ticks under the value light up from the left on focus */
+.rr{width:100%}
+.rr label{font-size:12.5px;font-weight:600;color:var(--muted)}
+.rr .box{position:relative;padding-bottom:9px}
+.rr input,.rr .sel{width:100%;height:36px;padding:0 2px;border:0;background:transparent;color:var(--text);outline:none;font-size:16px}
+.rr .ticks{position:absolute;left:0;right:0;bottom:0;height:7px;display:grid;grid-template-columns:repeat(18,1fr);gap:3px}
+.rr .ticks i{background:var(--border);transition:background .2s}
+.rr:focus-within .ticks i,.rr.is-focus .ticks i{background:var(--accent);transition-delay:calc(var(--n) * 18ms)}
+.rr:hover .ticks i,.rr.is-hover .ticks i{background:color-mix(in srgb,var(--accent) 35%,var(--border))}
+.rr.is-error .ticks i{background:var(--danger)} .rr.is-error label{color:var(--danger)}
+.rr.is-disabled{opacity:.5} .rr.is-disabled .ticks i{background:transparent;border-bottom:1px dashed var(--muted)}
+.rr .sel{display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left}
+.rr .sel i{font-style:normal;color:var(--accent)}
+
+/* C — Bracketed readout: corner brackets close in on focus, value in the console's mono */
+.bro{width:100%}
+.bro label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px}
+.bro .box{position:relative;padding:0 14px;background:color-mix(in srgb,var(--bg) 70%,var(--surface))}
+.bro .box::before,.bro .box::after{content:"";position:absolute;top:0;bottom:0;width:10px;border:2px solid var(--border);transition:all .22s var(--ease)}
+.bro .box::before{left:0;border-right:0} .bro .box::after{right:0;border-left:0}
+.bro input,.bro .sel{width:100%;height:42px;border:0;background:transparent;color:var(--text);outline:none;font-family:var(--f-mono);font-size:14px}
+.bro:focus-within .box::before,.bro.is-focus .box::before{left:-4px;border-color:var(--accent);width:14px}
+.bro:focus-within .box::after,.bro.is-focus .box::after{right:-4px;border-color:var(--accent);width:14px}
+.bro:hover .box::before,.bro:hover .box::after,.bro.is-hover .box::before,.bro.is-hover .box::after{border-color:color-mix(in srgb,var(--accent) 55%,var(--border))}
+.bro.is-error .box::before,.bro.is-error .box::after{border-color:var(--danger)}
+.bro.is-disabled{opacity:.5} .bro.is-disabled .box::before,.bro.is-disabled .box::after{border-style:dashed}
+.bro .sel{display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left}
+.err{font-size:12.5px;color:var(--danger);display:flex;gap:6px;align-items:center}
+
+/* ============ TABS ============ */
+/* A — Hex cells: a strip of interlocking hexagons, the active cell lit from inside */
+.thx{display:flex;padding-left:4px}
+.thx button{position:relative;height:40px;padding:0 24px;margin-left:-8px;border:0;cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);background:var(--surface-2);
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%,0 50%);transition:color .16s,background .16s}
+.thx button:hover{color:var(--text)}
+.thx button[aria-selected=true]{color:var(--ink);background:radial-gradient(ellipse at 50% 60%,color-mix(in srgb,var(--accent) 80%,white),var(--accent));z-index:1}
+.thx button:focus-visible{outline:none;color:var(--text);background:color-mix(in srgb,var(--focus) 30%,var(--surface-2))}
+.thx button[aria-selected=true]:focus-visible{background:var(--focus)}
+/* B — Rotor track: tabs sit on a rail; a glowing bead travels to the active one */
+.trt{position:relative;display:flex;gap:4px;padding-bottom:12px}
+.trt::before{content:"";position:absolute;left:0;right:0;bottom:4px;height:2px;background:repeating-linear-gradient(90deg,var(--border) 0 6px,transparent 6px 9px)}
+.trt button{border:0;background:none;cursor:pointer;padding:8px 14px;font-weight:600;font-size:14px;color:var(--muted)}
+.trt button:hover{color:var(--text)} .trt button[aria-selected=true]{color:var(--text)}
+.trt button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:2px}
+.trt .bead{position:absolute;bottom:0;height:10px;width:28px;border-radius:5px;background:var(--accent);box-shadow:0 0 12px var(--accent);left:0;transition:transform .35s var(--ease)}
+/* C — Console switches: each tab has its own light; the active light is on */
+.tsw{display:inline-flex;border:1px solid var(--border);background:var(--bg);padding:3px;gap:3px;border-radius:3px}
+.tsw button{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;padding:7px 14px;font-weight:600;font-size:14px;color:var(--muted);background:transparent;border-radius:2px}
+.tsw button::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);transition:all .2s}
+.tsw button:hover{color:var(--text)}
+.tsw button[aria-selected=true]{background:var(--surface-2);color:var(--text)}
+.tsw button[aria-selected=true]::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.tsw button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+
+/* ============ SIGNATURE — plan review ============ */
+.sig-demo{background:var(--bg);border-radius:3px;padding:14px;display:grid;gap:10px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;font-size:12px;font-weight:600;white-space:nowrap;
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%)}
+.tag.review{background:color-mix(in srgb,var(--attn) 16%,transparent);color:var(--attn)}
+/* A — Route rows: each move is a route — from, a dotted path, a hex at the destination */
+.route{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:3px}
+.route .file{font-weight:600}
+.route .path{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:3px}
+.route .path .from,.route .path .to{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.route .path .to{color:var(--text)}
+.route .path .line{width:56px;height:2px;background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 8px);animation:march 1s linear infinite;position:relative}
+.route .path .line::after{content:"";position:absolute;right:-6px;top:-4px;width:10px;height:10px;background:var(--accent);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+@keyframes march{to{background-position:16px 0}}
+.route.off{opacity:.55} .route.off .line{animation:none;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 8px)} .route.off .line::after{background:var(--border)}
+.toggle{position:relative;width:46px;height:24px;border-radius:12px;border:0;cursor:pointer;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+.toggle::after{content:"";position:absolute;top:4px;left:4px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .2s var(--ease),background .2s}
+.toggle[aria-checked=true]::after{left:26px;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.toggle:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.conf{display:grid;place-items:center;width:38px;height:38px;position:relative}
+.conf svg{position:absolute;inset:0} .conf span{font-family:var(--f-mono);font-size:10.5px}
+/* B — Destination bays: grouped by where files go; each bay is a notched panel you approve as a whole */
+.bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.bay{background:var(--border);padding:1px;clip-path:polygon(14px 0,calc(50% - 30px) 0,calc(50% - 22px) 6px,calc(50% + 22px) 6px,calc(50% + 30px) 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%,0 14px)}
+.bay>div{background:var(--surface);padding:14px;display:grid;gap:10px;height:100%;clip-path:inherit}
+.bay h4{margin:0;font:600 15px var(--f-display);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bay .dest{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.bay ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.bay li{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;padding:5px 8px;background:var(--bg);border-radius:2px}
+.bay li span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bay.review{--border:var(--attn)}
+/* C — Manifest: a plain, dense table with a timeline spine on the left — rows hang off the spine */
+.manifest{position:relative;padding-left:26px}
+.manifest::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--accent),var(--border))}
+.mrow{position:relative;display:grid;grid-template-columns:auto minmax(0,1.2fr) minmax(0,1.4fr) auto;gap:12px;align-items:center;padding:8px 10px;border-bottom:1px solid color-mix(in srgb,var(--border) 50%,transparent);font-size:14px}
+.mrow::before{content:"";position:absolute;left:-22px;top:50%;width:12px;height:11px;transform:translateY(-50%);background:var(--accent);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.mrow.off::before{background:var(--border)} .mrow.off{color:var(--muted)}
+.mrow .p{font-family:var(--f-mono);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow input{width:17px;height:17px;accent-color:var(--accent)}
+.apply{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--surface-2);border-radius:3px;font-size:13.5px}
+
+@media (max-width:900px){.options{grid-template-columns:1fr}}
+@media (max-width:640px){main{padding:18px 16px 110px} header.page h1{font-size:27px}
+  .route{grid-template-columns:auto minmax(0,1fr)} .route .conf{display:none} .route .path{grid-template-columns:1fr} .route .path .line{display:none} .route .path .from::after{content:" →";color:var(--accent)}
+  .mrow{grid-template-columns:auto minmax(0,1fr) auto} .mrow .p{display:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header class="page">
+    <div>
+      <h1>Component round 1</h1>
+      <p>Buttons, inputs and selects, tabs, and the signature component. Three options each, all original to the motif. Try them live with the mouse and the keyboard (Tab, Space, arrows); each also shows its states side by side. Pick one per component, or mix parts.</p>
+    </div>
+    <button class="theme" id="theme" type="button">Switch to light</button>
+  </header>
+
+  <!-- ================= BUTTONS ================= -->
+  <section class="comp" aria-labelledby="h-btn">
+    <h2 id="h-btn">Buttons</h2>
+    <p class="lead">Primary, secondary and destructive in every state: rest, hover, press, focus, loading, disabled.</p>
+    <div class="options">
+      <div class="opt">
+        <h3><b>A</b> Console key</h3>
+        <p>An elongated hexagon: the roundel stretched into a key. A light on the left wakes on hover; loading sweeps a bar along the base.</p>
+        <div class="live"><button class="bk primary" type="button">Approve and move</button><button class="bk" type="button">Pause</button><button class="bk danger" type="button">Reject</button></div>
+        <div class="strip">
+          <div class="state"><small>rest</small><button class="bk primary" type="button" tabindex="-1">Approve</button></div>
+          <div class="state"><small>hover</small><button class="bk primary is-hover" type="button" tabindex="-1">Approve</button></div>
+          <div class="state"><small>press</small><button class="bk primary is-active" type="button" tabindex="-1">Approve</button></div>
+          <div class="state"><small>focus</small><button class="bk primary is-focus" type="button" tabindex="-1">Approve</button></div>
+          <div class="state"><small>loading</small><button class="bk primary is-loading" type="button" tabindex="-1" aria-busy="true">Moving…</button></div>
+          <div class="state"><small>disabled</small><button class="bk primary" type="button" disabled>Approve</button></div>
+        </div>
+      </div>
+      <div class="opt">
+        <h3><b>B</b> Lever</h3>
+        <p>Every button carries a small throw-lever, like the console's switches. Hover nudges it, pressing throws it; loading rocks it back and forth.</p>
+        <div class="live"><button class="bl primary" type="button"><span class="lv" aria-hidden="true"></span>Approve and move</button><button class="bl" type="button"><span class="lv" aria-hidden="true"></span>Pause</button><button class="bl danger" type="button"><span class="lv" aria-hidden="true"></span>Reject</button></div>
+        <div class="strip">
+          <div class="state"><small>rest</small><button class="bl primary" type="button" tabindex="-1"><span class="lv"></span>Approve</button></div>
+          <div class="state"><small>hover</small><button class="bl primary is-hover" type="button" tabindex="-1"><span class="lv"></span>Approve</button></div>
+          <div class="state"><small>press</small><button class="bl primary is-active" type="button" tabindex="-1"><span class="lv"></span>Approve</button></div>
+          <div class="state"><small>focus</small><button class="bl primary is-focus" type="button" tabindex="-1"><span class="lv"></span>Approve</button></div>
+          <div class="state"><small>loading</small><button class="bl primary is-loading" type="button" tabindex="-1" aria-busy="true"><span class="lv"></span>Moving…</button></div>
+          <div class="state"><small>disabled</small><button class="bl primary" type="button" disabled><span class="lv"></span>Approve</button></div>
+        </div>
+      </div>
+      <div class="opt">
+        <h3><b>C</b> Roundel stud</h3>
+        <p>A glowing roundel sits over the button's left edge. It swells on hover, turns on press, and becomes a tiny spinning rotor while loading.</p>
+        <div class="live">
+          <span class="br-wrap primary"><span class="stud" aria-hidden="true"></span><button class="br" type="button">Approve and move</button></span>
+          <span class="br-wrap"><span class="stud" aria-hidden="true"></span><button class="br" type="button">Pause</button></span>
+          <span class="br-wrap danger"><span class="stud" aria-hidden="true"></span><button class="br" type="button">Reject</button></span>
+        </div>
+        <div class="strip">
+          <div class="state"><small>rest</small><span class="br-wrap primary"><span class="stud"></span><button class="br" type="button" tabindex="-1">Approve</button></span></div>
+          <div class="state"><small>hover</small><span class="br-wrap primary is-hover"><span class="stud"></span><button class="br" type="button" tabindex="-1">Approve</button></span></div>
+          <div class="state"><small>press</small><span class="br-wrap primary is-active"><span class="stud"></span><button class="br" type="button" tabindex="-1">Approve</button></span></div>
+          <div class="state"><small>focus</small><span class="br-wrap primary is-focus"><span class="stud"></span><button class="br" type="button" tabindex="-1">Approve</button></span></div>
+          <div class="state"><small>loading</small><span class="br-wrap primary is-loading"><span class="stud"></span><button class="br" type="button" tabindex="-1" aria-busy="true">Moving…</button></span></div>
+          <div class="state"><small>disabled</small><span class="br-wrap primary is-disabled"><span class="stud"></span><button class="br" type="button" disabled>Approve</button></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INPUTS & SELECTS ================= -->
+  <section class="comp" aria-labelledby="h-in">
+    <h2 id="h-in">Inputs and selects</h2>
+    <p class="lead">A text field and a select in each option, in rest, hover, focus, error and disabled.</p>
+    <div class="options">
+      <div class="opt">
+        <h3><b>A</b> Gauge slot</h3>
+        <p>The label rides in a hexagonal tab bolted to the field. Focus lights the tab and runs an orange rail along the base.</p>
+        <div class="live" style="display:grid">
+          <div class="gs"><label for="ga">Folder path</label><input id="ga" class="mono" value="C:\Users\Tanve\Downloads"></div>
+          <div class="gs"><label>Category</label><button class="sel" type="button" aria-haspopup="listbox">All categories <i aria-hidden="true"></i></button></div>
+        </div>
+        <div class="strip">
+          <div class="state"><small>hover</small><div class="gs is-hover"><label>Name</label><input tabindex="-1" placeholder="Optional"></div></div>
+          <div class="state"><small>focus</small><div class="gs is-focus"><label>Name</label><input tabindex="-1" value="Invoices"></div></div>
+          <div class="state"><small>error</small><div class="gs is-error"><label>Folder path</label><input tabindex="-1" class="mono" value="C:\Windows"></div><span class="err">System folders can't be added.</span></div>
+          <div class="state"><small>disabled</small><div class="gs is-disabled"><label>Name</label><input tabindex="-1" disabled value="Locked"></div></div>
+        </div>
+      </div>
+      <div class="opt">
+        <h3><b>B</b> Rib rail</h3>
+        <p>No box at all. The value sits on a rail of 18 rib ticks. Focus lights the ticks one after another, left to right, like the rotor filling.</p>
+        <div class="live" style="display:grid;gap:14px">
+          <div class="rr"><label for="ra">Folder path</label><div class="box"><input id="ra" class="mono" value="C:\Users\Tanve\Downloads"><span class="ticks" aria-hidden="true"></span></div></div>
+          <div class="rr"><label>Category</label><div class="box"><button class="sel" type="button" aria-haspopup="listbox">All categories <i aria-hidden="true">⌄</i></button><span class="ticks" aria-hidden="true"></span></div></div>
+        </div>
+        <div class="strip">
+          <div class="state"><small>hover</small><div class="rr is-hover"><label>Name</label><div class="box"><input tabindex="-1" placeholder="Optional"><span class="ticks"></span></div></div></div>
+          <div class="state"><small>focus</small><div class="rr is-focus"><label>Name</label><div class="box"><input tabindex="-1" value="Invoices"><span class="ticks"></span></div></div></div>
+          <div class="state"><small>error</small><div class="rr is-error"><label>Folder path</label><div class="box"><input tabindex="-1" class="mono" value="C:\Windows"><span class="ticks"></span></div></div><span class="err">System folders can't be added.</span></div>
+          <div class="state"><small>disabled</small><div class="rr is-disabled"><label>Name</label><div class="box"><input tabindex="-1" disabled value="Locked"><span class="ticks"></span></div></div></div>
+        </div>
+      </div>
+      <div class="opt">
+        <h3><b>C</b> Bracketed readout</h3>
+        <p>The field is a console readout between two brackets, value in mono. Focus closes the brackets in around it.</p>
+        <div class="live" style="display:grid;gap:12px">
+          <div class="bro"><label for="ba">Folder path</label><div class="box"><input id="ba" value="C:\Users\Tanve\Downloads"></div></div>
+          <div class="bro"><label>Category</label><div class="box"><button class="sel" type="button" aria-haspopup="listbox">All categories <span aria-hidden="true">▾</span></button></div></div>
+        </div>
+        <div class="strip">
+          <div class="state"><small>hover</small><div class="bro is-hover"><label>Name</label><div class="box"><input tabindex="-1" placeholder="Optional"></div></div></div>
+          <div class="state"><small>focus</small><div class="bro is-focus"><label>Name</label><div class="box"><input tabindex="-1" value="Invoices"></div></div></div>
+          <div class="state"><small>error</small><div class="bro is-error"><label>Folder path</label><div class="box"><input tabindex="-1" value="C:\Windows"></div></div><span class="err">System folders can't be added.</span></div>
+          <div class="state"><small>disabled</small><div class="bro is-disabled"><label>Name</label><div class="box"><input tabindex="-1" disabled value="Locked"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TABS ================= -->
+  <section class="comp" aria-labelledby="h-tab">
+    <h2 id="h-tab">Tabs</h2>
+    <p class="lead">Live and keyboard-operable: focus a tab, then use the arrow keys.</p>
+    <div class="options">
+      <div class="opt">
+        <h3><b>A</b> Hex cells</h3>
+        <p>A strip of interlocking hexagons, a slice of the honeycomb. The active cell is lit from inside.</p>
+        <div class="live"><div class="thx" role="tablist" aria-label="Organiser (A)"><button role="tab" aria-selected="true">Plan</button><button role="tab" aria-selected="false" tabindex="-1">Folders</button><button role="tab" aria-selected="false" tabindex="-1">History</button></div></div>
+      </div>
+      <div class="opt">
+        <h3><b>B</b> Rotor track</h3>
+        <p>Tabs sit on a dashed rail; a glowing bead travels along it to the active tab.</p>
+        <div class="live"><div class="trt" role="tablist" aria-label="Organiser (B)"><button role="tab" aria-selected="true">Plan</button><button role="tab" aria-selected="false" tabindex="-1">Folders</button><button role="tab" aria-selected="false" tabindex="-1">History</button><span class="bead" aria-hidden="true"></span></div></div>
+      </div>
+      <div class="opt">
+        <h3><b>C</b> Console switches</h3>
+        <p>A bank of switches, each with its own light; the active tab's light is on.</p>
+        <div class="live"><div class="tsw" role="tablist" aria-label="Organiser (C)"><button role="tab" aria-selected="true">Plan</button><button role="tab" aria-selected="false" tabindex="-1">Folders</button><button role="tab" aria-selected="false" tabindex="-1">History</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIGNATURE ================= -->
+  <section class="comp wide" aria-labelledby="h-sig">
+    <h2 id="h-sig">Signature component: the plan review</h2>
+    <p class="lead">The Organiser's moment: a plan of moves you approve before anything touches the disk. Three ways to show it. The file data stays plainly readable in all three.</p>
+    <div class="options">
+      <div class="opt">
+        <h3><b>A</b> Routes</h3>
+        <p>Each move is a route: from, a marching dotted path, a hexagon at the destination. A lever-switch includes it; a mini rotor ring shows confidence. Excluded routes go dark and still.</p>
+        <div class="sig-demo" id="routes"></div>
+        <div class="apply"><span><strong class="mono" id="r-count">3</strong> of 4 moves included · applied as one batch you can undo</span><button class="bk primary" type="button">Approve and move 3 files</button></div>
+      </div>
+      <div class="opt">
+        <h3><b>B</b> Destination bays</h3>
+        <p>Grouped by destination: one notched bay per destination folder, approved as a whole or file by file. Bays holding a low-confidence file glow orange.</p>
+        <div class="sig-demo"><div class="bays">
+          <div class="bay"><div><h4>Invoices <span class="tag" style="background:var(--surface-2)">2 files</span></h4><div class="dest">Documents\Invoices\2026\</div><ul><li><span>Invoice_0423_final(2).pdf</span><span class="mono">94%</span></li><li><span>Tax return 2025.pdf</span><span class="mono">97%</span></li></ul><button class="bk primary" type="button">Approve bay</button></div></div>
+          <div class="bay review"><div><h4>Installers <span class="tag review">Needs review</span></h4><div class="dest">Downloads\_review\installers\</div><ul><li><span>setup-x64 (1).exe</span><span class="mono">88%</span></li><li><span>scan0007.pdf</span><span class="mono">52%</span></li></ul><button class="bk" type="button">Review 2 files</button></div></div>
+        </div></div>
+      </div>
+      <div class="opt">
+        <h3><b>C</b> Manifest</h3>
+        <p>The densest: a plain table hung off a lit spine, a hexagon marker per row that goes dark when the row is excluded. Built for long plans.</p>
+        <div class="sig-demo"><div class="manifest" id="manifest"></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const rows = [
+  ["Invoice_0423_final(2).pdf","Downloads\\","Documents\\Invoices\\2026\\",94,true],
+  ["IMG_20240611_181203.jpg","Downloads\\","Pictures\\2024\\June\\",91,true],
+  ["scan0007.pdf","Desktop\\","Documents\\Invoices\\2026\\",52,false],
+  ["Tax return 2025.pdf","Downloads\\","Documents\\Tax\\",97,true],
+];
+function ring(pct){const r=15,c=2*Math.PI*r,on=c*pct/100;return `<svg viewBox="0 0 38 38" aria-hidden="true"><circle cx="19" cy="19" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="4"/><circle cx="19" cy="19" r="${r}" fill="none" stroke="${pct<60?"var(--attn)":"var(--accent)"}" stroke-width="4" stroke-dasharray="${on} ${c}" transform="rotate(-90 19 19)"/></svg>`}
+document.getElementById("routes").innerHTML = rows.map(([f,from,to,c,on],i)=>`
+  <div class="route ${on?"":"off"}">
+    <button class="toggle" role="switch" aria-checked="${on}" aria-label="Include ${f}" data-i="${i}"></button>
+    <div><div class="file">${f} ${c<60?'<span class="tag review">Needs review</span>':""}</div>
+      <div class="path"><span class="from">${from}</span><span class="line" aria-hidden="true"></span><span class="to">${to}</span></div></div>
+    <span class="conf" title="Confidence">${ring(c)}<span>${c}</span></span>
+  </div>`).join("");
+document.getElementById("routes").addEventListener("click",e=>{const t=e.target.closest(".toggle");if(!t)return;const on=t.getAttribute("aria-checked")!=="true";t.setAttribute("aria-checked",on);t.closest(".route").classList.toggle("off",!on);
+  const n=document.querySelectorAll('#routes .toggle[aria-checked="true"]').length;document.getElementById("r-count").textContent=n;});
+document.getElementById("manifest").innerHTML = rows.map(([f,from,to,c,on],i)=>`
+  <div class="mrow ${on?"":"off"}"><input type="checkbox" ${on?"checked":""} aria-label="Include ${f}"><span>${f}</span><span class="p">${to}</span><span class="mono">${c<60?`<span class="tag review">Review · ${c}%</span>`:c+"%"}</span></div>`).join("")+
+  `<div class="apply" style="margin-top:10px"><span>3 of 4 included</span><button class="bk primary" type="button">Approve and move 3 files</button></div>`;
+document.getElementById("manifest").addEventListener("change",e=>{if(e.target.type==="checkbox")e.target.closest(".mrow").classList.toggle("off",!e.target.checked)});
+
+// rib ticks
+document.querySelectorAll(".rr .ticks").forEach(t=>{t.innerHTML=Array.from({length:18},(_,n)=>`<i style="--n:${n}"></i>`).join("")});
+
+// tabs: roving tabindex + arrow keys (the behaviour Radix Tabs will supply in the build)
+document.querySelectorAll('[role=tablist]').forEach(list=>{
+  const tabs=[...list.querySelectorAll('[role=tab]')], bead=list.querySelector('.bead');
+  function select(t,focus){tabs.forEach(x=>{const on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});if(focus)t.focus();
+    if(bead){bead.style.transform=`translateX(${t.offsetLeft+t.offsetWidth/2-14}px)`}}
+  tabs.forEach(t=>t.addEventListener('click',()=>select(t)));
+  list.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0)return;
+    if(e.key==='ArrowRight'){e.preventDefault();select(tabs[(i+1)%tabs.length],true)} if(e.key==='ArrowLeft'){e.preventDefault();select(tabs[(i-1+tabs.length)%tabs.length],true)}});
+  requestAnimationFrame(()=>select(tabs.find(t=>t.getAttribute('aria-selected')==='true')));
+});
+const tb=document.getElementById("theme");tb.addEventListener("click",()=>{const l=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=l?"light":"dark";tb.textContent=l?"Switch to dark":"Switch to light"});
+</script>
+</body>
+</html>

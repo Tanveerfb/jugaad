@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jugaad — component round 1b</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Round 1b: Console key contrast variants + three new input directions. Tabs (rotor track) and
+   the plan review (destination bays) are locked from round 1 and not repeated here. */
+:root{--bg:#061428;--surface:#0c2140;--surface-2:#11294f;--border:#2a5287;--text:#e6edf6;--muted:#9db0c7;--accent:#ff8a2b;--ember:#b33f0f;--ember-hi:#c94a14;
+  --aqua:#52d6e6;--danger:#ff6b6b;--focus:#ffb067;--ease:cubic-bezier(.16,1,.3,1);
+  --f-display:"Space Grotesk",system-ui,sans-serif;--f-body:"IBM Plex Sans",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace;color-scheme:dark}
+[data-theme="light"]{--bg:#efe2d2;--surface:#fdf6ee;--surface-2:#f1dfca;--border:#b97a50;--text:#0e2a47;--muted:#4f6075;--accent:#e2691b;--ember:#b33f0f;--ember-hi:#c24614;
+  --aqua:#0f7f8c;--danger:#b42318;--focus:#b4470f;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{font:15px/1.5 var(--f-body);color:var(--text);background:var(--bg)}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+button,input{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono)}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 120px}
+header.page{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
+header.page h1{font-size:34px;font-weight:600;letter-spacing:-.02em} header.page p{margin:6px 0 0;color:var(--muted);max-width:72ch}
+.theme{height:36px;padding:0 14px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;border-radius:6px}
+section.comp{margin-top:40px;padding-top:24px;border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+section.comp>h2{font-size:24px;font-weight:600} section.comp>p.lead{margin:4px 0 18px;color:var(--muted);max-width:75ch}
+.options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.opt{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:18px;display:grid;gap:14px;align-content:start}
+.opt h3{font-size:17px;font-weight:600;display:flex;gap:8px;align-items:baseline} .opt h3 b{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:500}
+.opt p{margin:0;color:var(--muted);font-size:13.5px}
+.ratio{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.live{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;background:var(--bg);border-radius:3px}
+.live.col{display:grid;gap:16px}
+.strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.state{display:grid;gap:6px;justify-items:start;align-content:start} .state small{font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+.strip.wide{grid-template-columns:1fr}
+.strip.wide .state{justify-items:stretch}
+
+/* ===== Console key — shared shape and behaviour ===== */
+.bk{position:relative;display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 22px 0 16px;border:0;cursor:pointer;font-weight:600;font-size:14px;
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%,0 50%);transition:filter .16s,transform .16s var(--ease),background .16s}
+.bk::before{content:"";width:9px;height:9px;border-radius:50%;flex:none;transition:all .2s var(--ease)}
+.bk:active,.bk.is-active{transform:scale(.97)}
+.bk.is-loading{pointer-events:none} .bk.is-loading::before{animation:blink .7s steps(2) infinite}
+.bk.is-loading::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:30%;animation:sweep 1.1s var(--ease) infinite}
+.bk:disabled{cursor:not-allowed;opacity:.5;filter:grayscale(.5)} .bk:disabled::before{background:transparent!important;box-shadow:none!important;border:1.5px dashed currentColor}
+@keyframes blink{50%{opacity:.25}} @keyframes sweep{from{left:-30%}to{left:100%}}
+.bk.sec{background:var(--surface-2);color:var(--text)} .bk.sec::before{background:var(--muted)}
+.bk.sec:hover,.bk.sec.is-hover{filter:brightness(1.18)} .bk.sec:hover::before,.bk.sec.is-hover::before{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.bk.dgr{background:color-mix(in srgb,var(--danger) 16%,var(--surface-2));color:var(--danger)} .bk.dgr::before{background:var(--danger)}
+.bk:focus-visible,.bk.is-focus{outline:none;box-shadow:inset 0 -3px 0 var(--focus)}
+
+/* B1 — Ember: deep burnt-orange body, white text; bright orange only as light */
+.ember .bk.pri{background:var(--ember);color:#fff}
+.ember .bk.pri::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.ember .bk.pri:hover,.ember .bk.pri.is-hover{background:var(--ember-hi)} .ember .bk.pri:hover::before,.ember .bk.pri.is-hover::before{background:#ffd9b8;box-shadow:0 0 12px var(--accent)}
+.ember .bk.pri.is-loading::after{background:var(--accent)}
+.ember .bk.pri:focus-visible,.ember .bk.pri.is-focus{box-shadow:inset 0 -3px 0 #ffd9b8}
+/* B2 — Lit edge: navy body, orange text, orange hexagon edge drawn as an inset layer */
+.edge .bk.pri{background:var(--accent);color:var(--accent)}
+.edge .bk.pri>span{position:relative;z-index:1}
+.edge .bk.pri::after{content:"";position:absolute;inset:2px;background:var(--surface-2);clip-path:inherit;z-index:0;transition:background .16s}
+.edge .bk.pri::before{position:relative;z-index:1;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.edge .bk.pri:hover::after,.edge .bk.pri.is-hover::after{background:color-mix(in srgb,var(--accent) 18%,var(--surface-2))}
+.edge .bk.pri.is-loading::after{inset:2px;width:auto;height:auto;background:linear-gradient(90deg,var(--surface-2) 40%,color-mix(in srgb,var(--accent) 25%,var(--surface-2)) 50%,var(--surface-2) 60%);background-size:300% 100%;animation:shine 1.2s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
+.edge .bk.pri:focus-visible,.edge .bk.pri.is-focus{box-shadow:none;background:var(--focus)}
+.edge .bk.pri:focus-visible::after,.edge .bk.pri.is-focus::after{inset:3.5px}
+/* B3 — Split key: an orange end-cap holds the light; the body is navy with white text */
+.split .bk.pri{background:linear-gradient(90deg,var(--accent) 0 34px,var(--surface-2) 34px);color:var(--text);padding-left:12px;gap:22px}
+.split .bk.pri::before{background:#fff4e8;box-shadow:0 0 8px #fff4e8}
+.split .bk.pri:hover,.split .bk.pri.is-hover{background:linear-gradient(90deg,var(--accent) 0 40px,color-mix(in srgb,var(--accent) 14%,var(--surface-2)) 40px)}
+.split .bk.pri.is-loading::after{background:var(--accent)}
+.split .bk.pri:focus-visible,.split .bk.pri.is-focus{box-shadow:inset 0 -3px 0 var(--focus)}
+
+/* ===== Inputs ===== */
+.lbl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.err{font-size:12.5px;color:var(--danger);display:flex;gap:6px;align-items:center;margin-top:6px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+input.bare{width:100%;height:40px;border:0;background:transparent;outline:none;color:var(--text)}
+input.bare::placeholder{color:var(--muted)}
+
+/* I1 — Chase frame: on focus a light runs once round the edge and stays lit */
+.cf{position:relative;width:100%}
+.cf .wrap{position:relative;padding:0 14px;background:var(--bg)}
+.cf svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.cf .base{fill:none;stroke:var(--border);stroke-width:1.5}
+.cf .run{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:0 100;transition:stroke-dasharray .55s var(--ease)}
+.cf:focus-within .run,.cf.is-focus .run{stroke-dasharray:100 0}
+.cf:hover .base,.cf.is-hover .base{stroke:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.cf.is-error .base,.cf.is-error .run{stroke:var(--danger)} .cf.is-error .run{stroke-dasharray:100 0}
+.cf.is-disabled{opacity:.5} .cf.is-disabled .base{stroke-dasharray:3 3}
+.cf .sel{display:flex;justify-content:space-between;align-items:center;width:100%;height:40px;border:0;background:none;cursor:pointer;padding:0;text-align:left}
+.cf .chev{width:10px;height:9px;background:var(--accent);clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+
+/* I2 — Key slot: the field ends in a hexagonal cap that carries its action (clear, open, status) */
+.ks{display:flex;align-items:stretch;width:100%;height:42px}
+.ks .body{flex:1;min-width:0;display:flex;align-items:center;padding:0 12px 0 14px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);
+  clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)}
+.ks .cap{width:46px;margin-left:-1px;display:grid;place-items:center;border:0;cursor:pointer;background:var(--surface-2);color:var(--muted);
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%);transition:background .18s,color .18s}
+.ks .cap svg{width:16px;height:16px}
+.ks:hover .body,.ks.is-hover .body{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 50%,var(--border))}
+.ks:focus-within .body,.ks.is-focus .body{box-shadow:inset 0 0 0 1px var(--accent)} .ks:focus-within .cap,.ks.is-focus .cap{background:var(--accent);color:#fff}
+.ks .cap:focus-visible{outline:none;background:var(--focus);color:var(--bg)}
+.ks.is-error .body{box-shadow:inset 0 0 0 1px var(--danger)} .ks.is-error .cap{background:var(--danger);color:#fff}
+.ks.is-valid .cap{background:color-mix(in srgb,var(--aqua) 25%,var(--surface-2));color:var(--aqua)}
+.ks.is-disabled{opacity:.5} .ks.is-disabled .body{background:repeating-linear-gradient(135deg,var(--bg) 0 6px,var(--surface) 6px 7px)}
+.ks .sel{width:100%;height:100%;display:flex;align-items:center;border:0;background:none;cursor:pointer;padding:0;text-align:left}
+
+/* I3 — Roundel socket: a roundel at the field's left edge is its status light */
+.rs{display:flex;align-items:center;gap:0;width:100%;height:44px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--border);border-radius:22px 3px 3px 22px;padding-right:12px}
+.rs .socket{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,var(--surface) 0 55%,transparent 56%),conic-gradient(var(--border) 0 100%)}
+.rs .socket i{width:14px;height:14px;border-radius:50%;background:var(--muted);opacity:.6;transition:all .25s var(--ease)}
+.rs input.bare,.rs .sel{padding-left:10px}
+.rs:hover,.rs.is-hover{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 50%,var(--border))}
+.rs:focus-within,.rs.is-focus{box-shadow:inset 0 0 0 1px var(--accent)}
+.rs:focus-within .socket i,.rs.is-focus .socket i{background:var(--accent);opacity:1;box-shadow:0 0 12px var(--accent)}
+.rs.is-error{box-shadow:inset 0 0 0 1px var(--danger)} .rs.is-error .socket i{background:var(--danger);opacity:1;box-shadow:0 0 10px var(--danger)}
+.rs.is-valid .socket i{background:var(--aqua);opacity:1;box-shadow:0 0 10px var(--aqua)}
+.rs.is-disabled{opacity:.5} .rs.is-disabled .socket i{background:transparent;border:1.5px dashed var(--muted)}
+.rs .sel{flex:1;height:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:none;cursor:pointer;text-align:left}
+
+@media (max-width:900px){.options{grid-template-columns:1fr}}
+@media (max-width:640px){main{padding:18px 16px 110px} header.page h1{font-size:27px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header class="page">
+    <div>
+      <h1>Component round 1b</h1>
+      <p>Locked from round 1: tabs as the rotor track, the plan review as destination bays. Here: the console key in three contrast treatments, and three new directions for inputs and selects.</p>
+    </div>
+    <button class="theme" id="theme" type="button">Switch to light</button>
+  </header>
+
+  <section class="comp" aria-labelledby="h-btn">
+    <h2 id="h-btn">Console key: contrast</h2>
+    <p class="lead">Same hexagon key and light; only the primary's colouring changes. Every pair passes WCAG AA in both themes.</p>
+    <div class="options">
+      <div class="opt ember" data-variant="ember">
+        <h3><b>A1</b> Ember</h3>
+        <p>A deeper burnt-orange body with white text. The bright orange moves into the light and the loading sweep.</p>
+        <div class="ratio">white on #b33f0f · 5.8 : 1</div>
+        <div class="live"></div><div class="strip"></div>
+      </div>
+      <div class="opt edge" data-variant="edge">
+        <h3><b>A2</b> Lit edge</h3>
+        <p>A navy body with orange text inside a bright orange hexagon edge. Hover fills it with a faint glow.</p>
+        <div class="ratio">orange on navy · 6.1 : 1</div>
+        <div class="live"></div><div class="strip"></div>
+      </div>
+      <div class="opt split" data-variant="split">
+        <h3><b>A3</b> Split key</h3>
+        <p>An orange end-cap carries the light; the label sits on navy in white. Hover widens the cap and warms the body.</p>
+        <div class="ratio">white on navy · 13 : 1</div>
+        <div class="live"></div><div class="strip"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="comp" aria-labelledby="h-in">
+    <h2 id="h-in">Inputs and selects: new directions</h2>
+    <p class="lead">Each shows a text field and a select live, then hover, focus, error, valid and disabled.</p>
+    <div class="options">
+      <div class="opt">
+        <h3><b>I1</b> Chase frame</h3>
+        <p>The field's edge is the honeycomb tile's edge: on focus a light runs once round it and stays lit.</p>
+        <div class="live col" id="i1"></div><div class="strip wide" id="i1s"></div>
+      </div>
+      <div class="opt">
+        <h3><b>I2</b> Key slot</h3>
+        <p>The field is a console key laid flat: its hexagonal end-cap carries the action: clear, open the list, or show the status. Matches the buttons.</p>
+        <div class="live col" id="i2"></div><div class="strip wide" id="i2s"></div>
+      </div>
+      <div class="opt">
+        <h3><b>I3</b> Roundel socket</h3>
+        <p>A roundel set into the field's left end is its status light: dim at rest, orange while you type, red on error, aqua when valid.</p>
+        <div class="live col" id="i3"></div><div class="strip wide" id="i3s"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* buttons */
+const states=[["rest",""],["hover","is-hover"],["press","is-active"],["focus","is-focus"],["loading","is-loading"],["disabled","disabled"]];
+document.querySelectorAll(".opt[data-variant]").forEach(o=>{
+  const wrap=s=>o.dataset.variant==="edge"?`<span>${s}</span>`:s;
+  o.querySelector(".live").innerHTML=`<button class="bk pri" type="button">${wrap("Approve and move")}</button><button class="bk sec" type="button">Pause</button><button class="bk dgr" type="button">Reject</button>`;
+  o.querySelector(".strip").innerHTML=states.map(([n,c])=>`<div class="state"><small>${n}</small><button class="bk pri ${c==="disabled"?"":c}" type="button" tabindex="-1" ${c==="disabled"?"disabled":""}>${wrap(c==="is-loading"?"Moving…":"Approve")}</button></div>`).join("");
+});
+
+/* inputs */
+const X='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+const V='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+const OK='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5l3 3 6-6.5"/></svg>';
+const ALERT='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M8 4v5M8 12h.01"/></svg>';
+const frame='<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="base" vector-effect="non-scaling-stroke" d="M3 0H97L100 8V92L97 100H3L0 92V8Z"/><path class="run" pathLength="100" vector-effect="non-scaling-stroke" d="M3 0H97L100 8V92L97 100H3L0 92V8Z"/></svg>';
+
+const i1=(cls,label,inner,msg="")=>`<div><span class="lbl">${label}</span><div class="cf ${cls}"><div class="wrap">${frame}${inner}</div></div>${msg}</div>`;
+const i2=(cls,label,inner,cap,msg="")=>`<div><span class="lbl">${label}</span><div class="ks ${cls}"><div class="body">${inner}</div><button class="cap" type="button" tabindex="-1" aria-label="${cap[1]}">${cap[0]}</button></div>${msg}</div>`;
+const i3=(cls,label,inner,msg="")=>`<div><span class="lbl">${label}</span><div class="rs ${cls}"><span class="socket" aria-hidden="true"><i></i></span>${inner}</div>${msg}</div>`;
+const val=(v,ph="",dis="")=>`<input class="bare mono" ${dis} value="${v}" placeholder="${ph}" aria-label="field">`;
+const sel=`<button class="sel" type="button" aria-haspopup="listbox">All categories <span class="chev" aria-hidden="true"></span></button>`;
+const sel2=`<button class="sel" type="button" aria-haspopup="listbox">All categories</button>`;
+const sel3=`<button class="sel" type="button" aria-haspopup="listbox">All categories <span aria-hidden="true" style="color:var(--accent)">⌄</span></button>`;
+const errMsg='<span class="err">System folders can\'t be added.</span>';
+
+document.getElementById("i1").innerHTML=i1("","Folder path",val("C:\\Users\\Tanve\\Downloads"))+i1("","Category",sel);
+document.getElementById("i1s").innerHTML=[["hover","is-hover",val("","Optional")],["focus","is-focus",val("Invoices")],["error","is-error",val("C:\\Windows"),errMsg],["disabled","is-disabled",val("Locked","","disabled")]]
+  .map(([n,c,v,m])=>`<div class="state"><small>${n}</small>${i1(c,"Name",v,m||"")}</div>`).join("");
+
+document.getElementById("i2").innerHTML=i2("","Folder path",val("C:\\Users\\Tanve\\Downloads"),[X,"Clear"])+i2("","Category",sel2,[V,"Open list"]);
+document.getElementById("i2s").innerHTML=[["hover","is-hover",val("","Optional"),[X,"Clear"]],["focus","is-focus",val("Invoices"),[X,"Clear"]],["error","is-error",val("C:\\Windows"),[ALERT,"Error"],errMsg],["valid","is-valid",val("D:\\Photos"),[OK,"Valid"]],["disabled","is-disabled",val("Locked","","disabled"),[X,"Clear"]]]
+  .map(([n,c,v,cap,m])=>`<div class="state"><small>${n}</small>${i2(c,"Name",v,cap,m||"")}</div>`).join("");
+
+document.getElementById("i3").innerHTML=i3("","Folder path",val("C:\\Users\\Tanve\\Downloads"))+i3("","Category",sel3);
+document.getElementById("i3s").innerHTML=[["hover","is-hover",val("","Optional")],["focus","is-focus",val("Invoices")],["error","is-error",val("C:\\Windows"),errMsg],["valid","is-valid",val("D:\\Photos")],["disabled","is-disabled",val("Locked","","disabled")]]
+  .map(([n,c,v,m])=>`<div class="state"><small>${n}</small>${i3(c,"Name",v,m||"")}</div>`).join("");
+document.querySelectorAll(".strip input").forEach(i=>i.tabIndex=-1);
+
+const tb=document.getElementById("theme");tb.addEventListener("click",()=>{const l=document.documentElement.dataset.theme!=="light";document.documentElement.dataset.theme=l?"light":"dark";tb.textContent=l?"Switch to dark":"Switch to light"});
+</script>
+</body>
+</html>
