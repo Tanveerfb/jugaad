@@ -12,7 +12,7 @@ product
 
 One person — the owner — on their own Windows PC with a 16 GB GPU, in long desk sessions,
 dark room by default and daytime too. Works mainly in Node.js and JavaScript; already uses
-LM Studio and push-to-talk. Jobs: organise messy folders safely, talk to the app, ask
+Ollama and push-to-talk. Jobs: organise messy folders safely, talk to the app, ask
 questions about their own files, audit their projects against `fleet-standards`.
 
 ## Product Purpose

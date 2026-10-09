@@ -12,7 +12,7 @@ export type WorkbenchAi = {
   classifyFile(input: ClassifyFileInput, options?: AiCallOptions): Promise<FileClassification>;
 };
 
-export type AiProviderName = "mock" | "lmstudio" | "ollama";
+export type AiProviderName = "mock" | "ollama";
 
 export type AiCallOptions = {
   signal?: AbortSignal;

@@ -27,7 +27,7 @@ local and free; nothing is deployed.
 It stays that way because:
 
 - nothing on the network can reach a server bound to the loopback address;
-- there is no bill to protect — LM Studio and Ollama run locally without keys;
+- there is no bill to protect — Ollama runs locally without a key;
 - a login for the only person at the keyboard adds friction and no protection.
 
 **Not covered:** everything else in §AI — the adapter, zod-validated output, delimited

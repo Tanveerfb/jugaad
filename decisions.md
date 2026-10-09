@@ -223,3 +223,42 @@ of the locked motif. With this the core kit is chosen; the locked designs are co
   big lit hexagon from the motif mockup — features compose the kit (§SHADCN).
 - **Destination bays wait for phase 1**: designed and locked, built with the Organiser's
   plan data rather than as an empty shell now.
+
+---
+
+## 2026-10-09 — Ollama only; Gemma 4 12B QAT classifies
+
+**The owner dropped LM Studio: Jugaad runs on Ollama alone.** Owner's reason: LM Studio is
+unreliable in their use (it also shut down mid-test on the PC). This **overrides the spec's
+"LM Studio + Ollama"** planning decision in `Tanveerfb/project-plans`; the spec needs the same
+change (Open item: update project-plans). The `lmstudio` provider, `JUGAAD_LMSTUDIO_URL` and
+the live test's provider switch are removed — an unused provider is a second code path to keep
+working for nothing.
+
+**Default classifier: `gemma4:12b-it-qat`; `gemma4:e4b-it-qat` is the lighter fallback**,
+chosen by the agent at the owner's request ("you decide"). Live check on the PC (RTX 5060 Ti
+16 GB, Ollama 0.34.2, 32k context), one invoice fixture:
+
+| Model | Result | Cold | Warm | On GPU |
+| --- | --- | --- | --- | --- |
+| `gemma4:12b-it-qat` | correct | 33 s | 0.99 s | 7.47 GB, all of it |
+| `gemma4:e4b-it-qat` | correct | 8.9 s | 0.50 s | 3.05 GB, all of it |
+| `gemma4:latest` (8B), `qwen3:8b` | correct | — | ~0.5 s | not measured |
+| `gpt-oss:20b` | **empty output** | — | — | — |
+
+The owner's everyday apps (Broadcast, Chrome, Discord, Teams) hold ~2.3 GB and they don't game
+while working, so the 12B leaves ~6 GB for Voice and an embedding model; for moving files the
+more capable model is worth ~1 s a file. One fixture cannot separate the Gemma models — **phase
+1's fixture set re-runs `12b` against `e4b`**, and `e4b` takes over if it is as good.
+
+`gpt-oss:20b` is out: it always reasons first and cannot turn it off, and with reasoning off its
+answer arrives empty. Structured output on Ollama 0.34.2 still needs the JSON keys stated in the
+prompt — the laptop finding holds.
+
+**Ollama settings recorded:** context length 32k (it was 256k in the app, which overrides
+`OLLAMA_CONTEXT_LENGTH`; 32k covers classification, Ask my files' retrieved passages and
+Auditor's multi-file reads, and `e4b`'s cold load halved). "Expose to the network" turned off —
+Ollama was listening on all interfaces, against private-by-default.
+
+**Declined: Ollama web search.** It sends queries to ollama.com and works as a model-driven tool
+loop — against private-by-default and "no open-ended agent loops". Owner: not needed.

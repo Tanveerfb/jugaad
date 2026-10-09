@@ -5,11 +5,11 @@ import { createAiSdkAi } from "./ai-sdk";
 /*
  * Opt-in check against a real local model. Skipped unless JUGAAD_LIVE_AI=1, so `npm test`
  * never needs a GPU. Example:
- *   JUGAAD_LIVE_AI=1 JUGAAD_LIVE_PROVIDER=ollama JUGAAD_LIVE_MODEL=qwen3.5:latest npx vitest run src/lib/ai/live.test.ts
+ *   JUGAAD_LIVE_AI=1 JUGAAD_LIVE_MODEL=gemma4:12b-it-qat npx vitest run src/lib/ai/live.test.ts
  */
 const live = process.env.JUGAAD_LIVE_AI === "1";
-const provider = process.env.JUGAAD_LIVE_PROVIDER === "lmstudio" ? "lmstudio" : "ollama";
-const baseURL = provider === "lmstudio" ? "http://localhost:1234/v1" : "http://localhost:11434/v1";
+const provider = "ollama";
+const baseURL = "http://localhost:11434/v1";
 
 const INPUT: ClassifyFileInput = {
   fileName: "Invoice_0423_final(2).pdf",

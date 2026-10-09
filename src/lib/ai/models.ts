@@ -28,14 +28,23 @@ const CAPS: Record<AiTask, Pick<TaskModel, "maxOutputTokens" | "timeoutMs" | "re
   classifyFile: { maxOutputTokens: 256, timeoutMs: 60_000, reasoning: "none" },
 };
 
+/**
+ * Default model per task, named as `ollama list` shows it. Gemma 4 12B QAT: correct on the
+ * live check and fully on the 16 GB GPU at 32k context — 7.5 GB, ~1 s a file (decisions.md,
+ * 2026-10-09). `gemma4:e4b-it-qat` is the lighter fallback, set via JUGAAD_CLASSIFY_MODEL.
+ */
+const DEFAULT_MODELS: Record<AiTask, string> = {
+  classifyFile: "gemma4:12b-it-qat",
+};
+
 /** Resolves the model for a task from the environment. Null when running on the mock. */
 export function modelFor(task: AiTask): TaskModel | null {
   const provider = serverEnv.JUGAAD_AI_PROVIDER;
-  if (provider === "mock" || !serverEnv.JUGAAD_CLASSIFY_MODEL) return null;
+  if (provider === "mock") return null;
   return {
     provider,
-    baseURL: provider === "lmstudio" ? serverEnv.JUGAAD_LMSTUDIO_URL : serverEnv.JUGAAD_OLLAMA_URL,
-    modelId: serverEnv.JUGAAD_CLASSIFY_MODEL,
+    baseURL: serverEnv.JUGAAD_OLLAMA_URL,
+    modelId: serverEnv.JUGAAD_CLASSIFY_MODEL ?? DEFAULT_MODELS[task],
     ...CAPS[task],
   };
 }

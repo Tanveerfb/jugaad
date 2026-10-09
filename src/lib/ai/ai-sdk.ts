@@ -11,9 +11,9 @@ import { CLASSIFY_FILE_SYSTEM, classifyFilePrompt } from "./prompts/classify-fil
 import { AiTaskError, type AiCallOptions, type WorkbenchAi } from "./types";
 
 /**
- * LM Studio and Ollama through the AI SDK's OpenAI-compatible provider (spec: one code path
- * for both). Both servers accept a JSON schema as the response format, so structured output
- * is enforced by the server and then validated again here with zod.
+ * Ollama through the AI SDK's OpenAI-compatible provider. The server accepts a JSON schema as
+ * the response format, so structured output is enforced there and then validated again here
+ * with zod.
  */
 export function createAiSdkAi(classify: TaskModel, model?: LanguageModel): WorkbenchAi {
   // `model` is injected only by tests (the SDK's MockLanguageModelV4)

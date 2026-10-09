@@ -21,7 +21,7 @@ docs before writing code) applies to Claude Code too.
   Voice, Ask my files, Auditor. Single user, private by default.
 - **Spec**: `plans/jugaad/README.md` in the private `Tanveerfb/project-plans` repo — binding
   for scope, phases and what done means
-- **Repo**: local git, branch `master`; remote `Tanveerfb/jugaad` not created yet (`docs/STATUS.md`)
+- **Repo**: https://github.com/Tanveerfb/jugaad, branch `master` (no live users — work on `master`)
 - **Deploys**: nowhere. Runs locally only (`npm run dev` / `npm start` on the owner's PC)
 - **Area files**: none · **Map**: not yet (`docs/architecture.md` arrives with the core in phase 1)
 - **Trello board**: https://trello.com/b/2poFG0U9/jugaad
@@ -70,8 +70,8 @@ npm run lint           # eslint
 npm test               # vitest run — unit tests, mock model only, no GPU needed
 ```
 
-Live model check (opt-in, needs LM Studio or Ollama running):
-`JUGAAD_LIVE_AI=1 JUGAAD_LIVE_PROVIDER=ollama JUGAAD_LIVE_MODEL=<name> npx vitest run src/lib/ai/live.test.ts`
+Live model check (opt-in, needs Ollama running):
+`JUGAAD_LIVE_AI=1 JUGAAD_LIVE_MODEL=gemma4:12b-it-qat npx vitest run src/lib/ai/live.test.ts`
 
 **Do not use `npm run lint` to validate builds — use `npm run build`.** Lint includes the
 §NAMING filename rule (`eslint-plugin-check-file`).
@@ -90,7 +90,7 @@ Verified against `package.json`, 2026-10-08.
 | Motion | CSS + React 19.3 `<ViewTransition>`; `motion` 14 installed, not used yet |
 | Data | SQLite via Node's built-in `node:sqlite` (WAL), `data-model.md`; vector extension still open |
 | Worker | `src/worker/`, run with `tsx`; talks to the app only through SQLite |
-| AI | `ai` 7 + `@ai-sdk/openai-compatible` 3 → LM Studio or Ollama; mock by default |
+| AI | `ai` 7 + `@ai-sdk/openai-compatible` 3 → Ollama only (`gemma4:12b-it-qat`); mock by default |
 | Tests | Vitest 5 |
 | Hosting | local only |
 
@@ -138,6 +138,8 @@ Verified against `package.json`, 2026-10-08.
 - In `next dev`, the first navigation to a not-yet-compiled route can show "Transition was
   aborted because of timeout in DOM update" — Turbopack's on-demand compile outlasts the
   browser's view-transition timeout. Dev only; production routes are prebuilt.
+- **On a fresh clone, `npx tsc --noEmit` fails with `Cannot find name 'LayoutProps'`** until a
+  build (or `next dev`) has generated `.next/` types. Build first; it is not a code error.
 - In Claude Code's Bash tool, `cd` can fail with fnm's "can't find the necessary environment
   variables" — use `builtin cd`.
 - **`next dev` sometimes serves a stale `globals.css`** after edits (seen twice, 2026-10-09):

@@ -11,18 +11,13 @@ import { z } from "zod";
  */
 const serverEnvSchema = z
   .object({
-    /** Which model backend answers: mock (no GPU), lmstudio or ollama. */
-    JUGAAD_AI_PROVIDER: z.enum(["mock", "lmstudio", "ollama"]).default("mock"),
-    JUGAAD_LMSTUDIO_URL: z.url().default("http://localhost:1234/v1"),
+    /** Which model backend answers: mock (no GPU) or ollama. */
+    JUGAAD_AI_PROVIDER: z.enum(["mock", "ollama"]).default("mock"),
     JUGAAD_OLLAMA_URL: z.url().default("http://localhost:11434/v1"),
-    /** Model for classification, exactly as LM Studio / `ollama list` names it. */
+    /** Model for classification, exactly as `ollama list` names it. Default in lib/ai/models.ts. */
     JUGAAD_CLASSIFY_MODEL: z.string().min(1).optional(),
     /** Where the database lives. Default: %LOCALAPPDATA%\Jugaad (see lib/data-dir.ts). */
     JUGAAD_DATA_DIR: z.string().min(1).optional(),
-  })
-  .refine((env) => env.JUGAAD_AI_PROVIDER === "mock" || env.JUGAAD_CLASSIFY_MODEL, {
-    message: "JUGAAD_CLASSIFY_MODEL is required unless JUGAAD_AI_PROVIDER is mock",
-    path: ["JUGAAD_CLASSIFY_MODEL"],
   });
 
 const clientEnvSchema = z.object({});
@@ -30,7 +25,6 @@ const clientEnvSchema = z.object({});
 /** Server-side variables — model backend and model names. Never import from a client component. */
 export const serverEnv = parseOrExplain("server", serverEnvSchema, {
   JUGAAD_AI_PROVIDER: process.env.JUGAAD_AI_PROVIDER,
-  JUGAAD_LMSTUDIO_URL: process.env.JUGAAD_LMSTUDIO_URL,
   JUGAAD_OLLAMA_URL: process.env.JUGAAD_OLLAMA_URL,
   JUGAAD_CLASSIFY_MODEL: process.env.JUGAAD_CLASSIFY_MODEL,
   JUGAAD_DATA_DIR: process.env.JUGAAD_DATA_DIR,
