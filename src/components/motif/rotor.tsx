@@ -8,6 +8,8 @@ type RotorProps = {
   caption: string;
   /** Accessible description of the whole ring. */
   label: string;
+  /** A small ring for a job row: segments and the inner marks only — the row says the rest. */
+  compact?: boolean;
   className?: string;
 };
 
@@ -21,18 +23,20 @@ const INNER_MARKS = ringMarks(C, C, 74, 18, 2);
  * two rings of original marks turning in opposite directions while a job runs. Idle, nothing
  * turns — motion here means work is happening.
  */
-export function Rotor({ progress, caption, label, className }: RotorProps) {
+export function Rotor({ progress, caption, label, compact = false, className }: RotorProps) {
   const running = progress !== null;
   const lit = running ? litSegmentCount(progress) : 0;
   const percent = running ? `${Math.round(progress * 100)}%` : "—";
 
   return (
-    <svg viewBox="0 0 232 232" role="img" aria-label={label} className={cn("size-[232px]", className)}>
-      <g className={cn("origin-center [transform-box:view-box]", running && "animate-rotor-cw")}>
-        {OUTER_MARKS.map((m, i) => (
-          <Mark key={i} mark={m} />
-        ))}
-      </g>
+    <svg viewBox="0 0 232 232" role="img" aria-label={label} className={cn(compact ? "size-[58px]" : "size-[232px]", className)}>
+      {!compact && (
+        <g className={cn("origin-center [transform-box:view-box]", running && "animate-rotor-cw")}>
+          {OUTER_MARKS.map((m, i) => (
+            <Mark key={i} mark={m} />
+          ))}
+        </g>
+      )}
       <g>
         {SEGMENTS.map((s) => {
           const on = s.index < lit;
@@ -56,12 +60,16 @@ export function Rotor({ progress, caption, label, className }: RotorProps) {
           <Mark key={i} mark={m} />
         ))}
       </g>
-      <text x={C} y={114} textAnchor="middle" className="fill-foreground font-mono text-[34px] font-medium">
-        {percent}
-      </text>
-      <text x={C} y={138} textAnchor="middle" className="fill-muted-foreground font-mono text-[12px]">
-        {caption}
-      </text>
+      {!compact && (
+        <>
+          <text x={C} y={114} textAnchor="middle" className="fill-foreground font-mono text-[34px] font-medium">
+            {percent}
+          </text>
+          <text x={C} y={138} textAnchor="middle" className="fill-muted-foreground font-mono text-[12px]">
+            {caption}
+          </text>
+        </>
+      )}
     </svg>
   );
 }

@@ -1,4 +1,5 @@
 import { getAi } from "@/lib/ai";
+import { releaseModels } from "@/lib/ai/model-manager";
 import { databasePath, getStore } from "@/lib/data";
 import { log } from "@/lib/log";
 import { startWorker } from "./run-worker";
@@ -18,6 +19,7 @@ async function shutdown(signal: string) {
   stopping = true;
   log("worker.stopping", { signal });
   await worker.stop();
+  await releaseModels(); // hand the GPU back
   store.close();
   process.exit(0);
 }

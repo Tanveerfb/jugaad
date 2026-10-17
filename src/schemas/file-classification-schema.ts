@@ -14,6 +14,16 @@ export const classifyFileInputSchema = z.object({
   excerpt: z.string().max(2000).optional(),
   /** The categories the owner approved. The model must pick one of these. */
   categories: z.array(z.string().min(1)).min(1),
+  /**
+   * For categories that already exist as folders: a few names of the files in them, so the
+   * model knows what the owner keeps there (`folderSamples`). Data, never instructions.
+   */
+  holds: z.record(z.string(), z.array(z.string().min(1).max(80)).max(4)).optional(),
+  /**
+   * Files the owner filed by hand, most like this one — how the owner sorts, as examples
+   * (2026-10-17: learn from corrections). Data, never instructions.
+   */
+  examples: z.array(z.object({ file: z.string().min(1).max(400), category: z.string().min(1) })).max(6).optional(),
 });
 export type ClassifyFileInput = z.infer<typeof classifyFileInputSchema>;
 
@@ -26,6 +36,9 @@ export const fileClassificationSchema = z.object({
   confidence: z.number().min(0).max(1),
 });
 export type FileClassification = z.infer<typeof fileClassificationSchema>;
+
+/** A filing decision the owner made by hand: what the file is, and where it went. */
+export type FilingExample = { fileId: string; hash: string; description: string; category: string };
 
 /**
  * The same schema, tightened for one call: the category must be one the owner approved. A

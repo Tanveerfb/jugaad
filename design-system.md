@@ -89,7 +89,8 @@ Materialise 680ms.
 
 **Kit shapes:** `shape-key` (console key: a hexagon stretched, `--tip` 12px; 10px small,
 14px large), `shape-cut` (two cut corners, `--chamfer-sm` 7px), `shape-notched` /
-`shape-chamfered` (panels), `shape-hex` (tiles, icon keys, checkboxes).
+`shape-chamfered` (panels), `shape-hex` (tiles, icon keys, checkboxes), `shape-bay` (destination
+bays: two cut top corners and a small top notch).
 
 ## Component kit
 

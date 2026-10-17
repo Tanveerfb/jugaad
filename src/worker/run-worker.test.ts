@@ -54,11 +54,11 @@ describe("startWorker", () => {
     await worker.stop();
   });
 
-  it("fails a job kind it has no handler for (phase 0 registers none)", async () => {
-    const { id } = store.enqueueJob(job);
+  it("fails a job kind it has no handler for", async () => {
+    const { id } = store.enqueueJob({ ...job, kind: "no-such-kind" });
     const worker = startWorker({ store, ai: createMockAi(), pollMs: 10 });
     await until(() => store.getJob(id)?.status === "failed");
-    expect(store.getJob(id)?.error).toMatch(/No handler for organiser\/scan-folder/);
+    expect(store.getJob(id)?.error).toMatch(/No handler for organiser\/no-such-kind/);
     await worker.stop();
   });
 
@@ -77,5 +77,27 @@ describe("startWorker", () => {
     await until(() => store.getJob(id)?.status === "done");
     expect(seen).toBe(1);
     await worker.stop();
+  });
+});
+
+describe("stopping a job", () => {
+  it("aborts a running job the owner cancelled, and leaves it cancelled", async () => {
+    const { id } = store.enqueueJob(job);
+    let aborted = false;
+    const worker = startWorker({
+      store,
+      ai: createMockAi(),
+      pollMs: 10,
+      cancelPollMs: 10,
+      handlers: () => async ({ signal }) => {
+        await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+        aborted = true;
+      },
+    });
+    await until(() => store.getJob(id)?.status === "running");
+    store.transitionJob(id, "cancelled");
+    await until(() => aborted);
+    await worker.stop();
+    expect(store.getJob(id)?.status).toBe("cancelled");
   });
 });

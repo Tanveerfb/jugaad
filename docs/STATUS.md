@@ -7,25 +7,24 @@ rewritten in place every checkpoint. The session log is append-at-top, newest fi
 
 ## Start here
 
-**State:** Phase 0 done and on GitHub (`Tanveerfb/jugaad`, `master`). The PC is set up and
-verified: Node 24, deps, 98 tests, build. AI is **Ollama only**, default classifier
-`gemma4:12b-it-qat`, checked live on the GPU (Decisions this checkpoint).
-**Next:** phase 1 — core (scanner, shared index, safety layer) + Organiser, per the spec;
-its sample-file set re-runs `12b` against `e4b` (Open items 1).
-**Blocked on:** nothing — phase 1 waits only for the owner to start it.
-**Don't trust:** a real Ctrl+C on the worker (unit-tested only); quality differences between
-the Gemma models (one fixture only); the toast ring's countdown seen moving.
+**State:** Phase 1 (core + Organiser) is built and tested, but not yet committed at the time of
+writing (see the newest log entry for the commit). Read-only audits ran on the owner's real
+folders (Verified this checkpoint). Nothing has been applied to a real folder.
+**Next:** the owner's own first run — `npm run app`, add `C:\Users\Tanve\Downloads`, scan,
+categories, plan, review, apply, check, undo if needed (Open items 1).
+**Blocked on:** the owner — the first real run is theirs to make.
+**Don't trust:** plan apply/undo on a *real* folder (unit tests, plus one smoke test on the
+sandbox copy only); first-plan time on big folders (~10 min for 525 files); category quality
+beyond the two folders audited.
 
-> **Things that will save a session:** the spec lives in `Tanveerfb/project-plans`
-> (`plans/jugaad/`), not here — and it still says "LM Studio + Ollama" (overridden, Open
-> items 2). `AGENTS.md` carries a Next.js-generated block that `next dev` re-adds — leave it.
-> Two machines: the **PC** (RTX 5060 Ti 16 GB, Ollama on the GPU, models in `E:\Ollama`) and
-> the **laptop** (Intel Arc, Ollama on CPU). Both use fnm (Node 24) with
-> `%APPDATA%\fnm\aliases\default` on the user PATH. On the PC, PowerShell 7's profile is under
-> `OneDrive\Documents\PowerShell\`. **Ollama app settings override env vars** (context length
-> 32k there). **Changing any Ollama setting restarts it and kills a running `ollama pull`**,
-> leaving empty `*-partial-N` files that make every retry fail with `EOF` — delete that
-> model's `-partial*` files in `E:\Ollama\blobs` and pull again.
+> **Things that will save a session:** the map is `docs/architecture.md`. The spec lives in
+> `Tanveerfb/project-plans` (`plans/jugaad/`). **Never approve or apply a plan on the owner's
+> real folders** — audits use a separate DB (`node_modules/.cache/jugaad-sandbox/`). To try the
+> UI, run `jugaad-dev-sandbox` (`.claude/launch.json`, port 3001) and a worker with the same
+> `JUGAAD_DATA_DIR`. **On Windows, stopping a background shell does not stop its node worker** —
+> list `node.exe` processes and stop stale workers, or old code keeps claiming jobs (happened
+> 2026-10-17). Heredocs in the Bash tool collapse `\\` — write backslash code with Write/Edit.
+> Ollama holds 2 models (`OLLAMA_MAX_LOADED_MODELS=2`, machine env, set by the owner).
 
 ---
 
@@ -40,98 +39,126 @@ default; never deletes a file.
 
 ## Current state
 
-- **Motif and kit in code:** tokens in `src/app/globals.css`, motif components in
-  `src/components/motif/`, the locked component kit in `src/components/ui/` on Radix
-  (`components.md`, `docs/design/components.html`). Workbench `/` and an empty `/organiser`.
-- **Worker and data:** `src/worker/` on `tsx`; `node:sqlite` store with jobs, lifecycle and
-  heartbeat (`data-model.md`). App bound to 127.0.0.1.
-- **AI layer:** `src/lib/ai/` — `classifyFile` behind `getAi()`, mock by default, AI SDK v7
-  over **Ollama only**. `JUGAAD_AI_PROVIDER=ollama` alone switches it on; the model defaults to
-  `gemma4:12b-it-qat` (`DEFAULT_MODELS` in `src/lib/ai/models.ts`), overridable with
-  `JUGAAD_CLASSIFY_MODEL`. `lmstudio` is now rejected at startup.
-- **Repo:** pushed to `github.com/Tanveerfb/jugaad`, `master` tracking `origin/master`.
-- **Rules:** `project-rules.md` v3.4.0, identical to the `fleet` plugin's copy.
+- **Core** (`docs/architecture.md` has the map): SQLite store, migrations v1–12
+  (`data-model.md`); scanner with quick fingerprints and content signals (PDF, Word, EXIF,
+  video via ffprobe, archives via Windows tar, program info, scanned-PDF captions); safety
+  layer — every move journalled, never overwrites, copy-verify across drives, undo, crash
+  reconciliation; model manager with a VRAM plan.
+- **Organiser** (locked design `docs/design/organiser.html`): paste a folder → scan →
+  suggested categories (image captions + embeddings + clustering + one naming call; existing
+  subfolders offered, pre-ticked only when files belong in them) → plan (one classification per
+  file, cached; existing folders shown with sample files) → destination bays with per-file
+  rename ticks and "Send to…" (remembered as filing examples) → apply → history and undo.
+  Folder-level "Include subfolders"; project folders move whole; duplicates to
+  `_review\Duplicates`; doubtful files to `_review`.
+- **Models:** `gemma4:12b-it-qat` classifies, names and captions; `qwen3-embedding:0.6b` embeds
+  (`num_ctx` 4096). Mock by default; `JUGAAD_AI_PROVIDER=ollama` switches on.
+- **Running it:** `npm run app` starts the built app and the worker together.
+- **Repo:** `master` at `9455a63` before this checkpoint; this session's work is the commit
+  named in the newest log entry.
 
 ---
 
 ## Decisions this checkpoint
 
-Full entries in `decisions.md` (2026-10-09 — Ollama only; Gemma 4 12B QAT classifies).
+Full entries in `decisions.md` (2026-10-16 to 2026-10-17, from "Phase 1 plan" on).
 
-- **LM Studio dropped** (owner: unreliable). Overrides the spec's "LM Studio + Ollama"; the
-  provider, `JUGAAD_LMSTUDIO_URL` and the live test's provider switch are gone.
-- **Classifier `gemma4:12b-it-qat`**, agent's choice at the owner's request: 7.47 GB fully on
-  GPU at 32k, ~1 s a file; the owner's everyday apps hold ~2.3 GB and they don't game while
-  working. `gemma4:e4b-it-qat` (3.05 GB, ~0.5 s) is the fallback.
-- **Ruled out:** `gpt-oss:20b` (always reasons; empty answer with reasoning off).
-- **Ollama on the PC:** context length 32k (was 256k in the app); network exposure off.
-- **Declined:** Ollama web search — queries leave the PC and it is a model-driven tool loop.
-  Owner: "nah its fine then. don't need it."
+- Owner's picks: organised files stay inside the same folder; folders added by pasting a path;
+  "Include subfolders" lives on the folder; renames are suggested, ticked per file; videos read
+  for length and resolution only (no frames); images only for vision; all four add-ons
+  (learn from corrections, keep projects whole, read text-less PDFs, archives + installers).
+- New dependencies: `unpdf`, `mammoth`, `exifr`, `@napi-rs/canvas` (pinned 1.0.10).
+- Tried and dropped: a 0.25 silhouette cut-off (put everything in one group); 32k context for
+  the embedder (5.78 GB); `gpt-oss` (failed every file); Git's GNU `tar` (can't read zip).
+- After the audits: existing folders pre-ticked only when matched, dot-folders hidden; the
+  classifier sees sample files per existing folder; no renames for files going to review;
+  `desktop.ini` and in-progress downloads never sorted; re-suggesting reuses the owner's names.
 
 ---
 
 ## Open items
 
-*Renumbered 2026-10-09 (2nd session): the GitHub remote exists — the old item 1 is closed.*
-
-1. **Phase 1 — core + Organiser** · [card](https://trello.com/c/1uunz8dK/3-phase-1-core-organiser)
-   — includes building destination bays (designed, `docs/design/rounds/round-1.html`), worker
-   status in the job panel, and a fixture set that re-runs `gemma4:12b-it-qat` against
-   `gemma4:e4b-it-qat`.
-2. **Update project-plans** · [card](https://trello.com/c/hlHkpgPp/8-update-project-plans-for-jugaad)
-   — `fleet-drift.md` (Jugaad on v3.4.0); the spec's resolved open questions and status; **the
-   LM Studio override and the classifier choice**. A separate repo, needing its own approval.
-3. **Remaining models** (spec open question: triage, reasoning, embeddings, vision, speech) —
-   chosen in the phase that needs each, against the VRAM left beside the 12B (~6 GB) ·
+1. **Owner's first real run** on Downloads, then `F:\Twtich Backup` ·
+   [card](https://trello.com/c/1uunz8dK/3-phase-1-core-organiser) (in Review until then).
+2. **Broad catch-all categories** — "Documents" took 107 Downloads files ·
+   [card](https://trello.com/c/jEq1MNE6/10-organiser-break-up-broad-catch-all-categories)
+3. **Update project-plans** · [card](https://trello.com/c/hlHkpgPp/8-update-project-plans-for-jugaad)
+   — fleet drift, resolved spec questions, LM Studio override, model choices (now including
+   the embedder and vision). Separate repo, its own approval.
+4. **Remaining models** (triage, reasoning, speech) — in their phases ·
    [card](https://trello.com/c/NKSDyjvb/7-choose-exact-models-on-the-pc)
-4. **`npm audit` reports 10 high-severity findings**, and `npm ci` warns that `esbuild` and
-   `unrs-resolver` install scripts are not in `allowScripts`. Not looked into;
-   `npm audit fix --force` would make breaking upgrades — review first ·
+5. **`npm audit` findings and install-script warnings** — not looked into ·
    [card](https://trello.com/c/Mng9loKR/9-review-npm-audit-findings-and-install-script-warnings)
 
 ---
 
 ## Verified this checkpoint, by measurement (on the PC)
 
-- Node 24.21.0 / npm 11.19.0 via fnm; `npm ci` from the lockfile.
-- `npx tsc --noEmit` clean — **after** a build: on a fresh clone it fails with
-  `Cannot find name 'LayoutProps'` until `.next/` types exist (`CLAUDE.md`, known issues).
-- `npm run lint` clean; `npm test` — 98 passed, 1 skipped (live); `npm run build` — 3 static
-  routes. Re-run after the Ollama-only change: all the same.
-- Live, Ollama 0.34.2, one invoice fixture — all correct (Invoices, `Invoice_0423_final.pdf`):
-  `gemma4:12b-it-qat` 33 s cold / 0.99 s warm, 7.47 GB on GPU; `gemma4:e4b-it-qat` 8.9 s /
-  0.50 s, 3.05 GB; `gemma4:latest`, `qwen3:8b` ~0.5 s warm (at 256k context). `gpt-oss:20b`
-  failed: empty output. Through the new default path (`JUGAAD_LIVE_MODEL` = the default): pass.
-- `modelFor('classifyFile')` with only `JUGAAD_AI_PROVIDER=ollama` resolves to
-  `gemma4:12b-it-qat`; `JUGAAD_AI_PROVIDER=lmstudio` stops startup with the env error.
-- Ollama listens on `127.0.0.1:11434` only; its server log shows `OLLAMA_CONTEXT_LENGTH:32768`.
-- Laptop-era checks (component kit in the browser, view transitions, worker heartbeat, filename
-  lint) are in the 2026-10-09 (1st session) log entry; nothing visual changed since.
-
-**The mistake worth keeping.** Structured output looked solved by sending a JSON schema; on
-Ollama with reasoning off the schema can be ignored and the model answers in Markdown. The
-prompt states the JSON keys too — still needed on 0.34.2. Don't remove that line.
+- `npx tsc --noEmit` clean; `npm run lint` clean; `npm test` — 404 passed, 5 skipped (live);
+  `npm run build` clean.
+- Live (`src/lib/ai/live.test.ts`, 12B): classify 1.3 s; caption of a drawn red circle correct
+  through the AI SDK 7 `file` part; embeddings separate bill from photo (0.58 vs 0.31).
+- Sample folder (48 files): `gemma4:12b-it-qat` 48/48, `gemma4:e4b-it-qat` 44/48 (called
+  screenshots photos at 0.9). On 150 real files vs the 12B: e4b agreed 73%, gemma4 8B 72%,
+  qwen3 8B 63%.
+- **Downloads** (read-only, sandbox DB): scan 41 s, 1,407 files / 18 GB, 62 duplicates;
+  suggestions 6.3 min incl. ~300 captions; first plan 9.8 min → after fixes 511 sorted, 14 to
+  review (Mixamo `.fbx`, `index.js`, a `.winmd`…), 13 duplicates, 85 renames; rebuild 0.1 s.
+  Spot-checked: all 25 files sent to `NCA` belong there.
+- **Twitch Backup**: scan 1 min 45 s, 1,514 files / 412 GB, 510 videos read; suggestions 15 s
+  (only the 11 existing folders); plan 39 s → 33 sorted, 2 to review (was 16 before folder
+  samples; all 10 OBS recordings now to `Recorded` at 0.8).
+- UI in the browser (sandbox): add folder, scan, categories (unticked "your folder" row, no
+  hidden folders, no near-twins on re-suggest, "1 file"), plan bays, history. Phone width
+  not re-checked this checkpoint.
 
 ---
 
 ## Assumed, not verified
 
-- That `12b` classifies better than `e4b` on real, harder files — one easy fixture can't tell.
-- First-visit view-transition abort in dev is purely Turbopack compile time.
-- The 2.3 GB VRAM baseline: measured once, with Broadcast, Chrome, Discord and Teams open.
+- Apply and undo on a real folder of this size (tested on fixtures and the sandbox copy).
+- Cross-drive moves on real large videos (unit-tested with copy-verify; never run on 400 GB).
+- That the Downloads suggestions now look right with the pre-tick fix — the audit ran before
+  it; the sandbox check used the small sample folder.
 
 ---
 
 ## Confidence and gaps
 
-Build, tests and the AI path are verified on the PC's GPU. The data layer, job queue and
-worker exist but have no UI yet — the VRAM gauge, sonic control and rotor show honest "not yet"
-states. No interface was re-checked in a browser this session (no UI changed). Coming back
-cold, start with Open item 1.
+Backend logic is well covered by unit tests and two real-folder audits; the interface was seen
+working in the browser on a sandbox copy. The untested part is the owner's own end-to-end run
+on a real folder, which is the next step and theirs to make. Coming back cold: read Start here,
+then `docs/architecture.md`, then the tail of `decisions.md`.
 
 ---
 
 ## Session log
+
+### 2026-10-16 → 17 (3rd session, on the PC) — Phase 1: core + Organiser, real-folder audits
+
+Relay, then the owner gave the session the GPU and phase 1. Planned with the question tool
+(same-folder sorting, paste a path, deps approved, mockups after backend). Built the core:
+store migrations v2–12, scanner (quick fingerprints after hashing 384 GB looked like ~40 min),
+signals, safety layer, model manager, worker handlers. Organiser mockup rounds →
+owner locked layout A, categories C1, renames R1, kept "Send to…" (artifact
+https://claude.ai/artifact/GexewtJ6MyMNGTfSne8Gta; record `docs/design/organiser.html`).
+Built the screens; `npm run app`; live refresh; dialog iris fix.
+
+Audits on the owner's Downloads across models (12B chosen; e4b, gemma4 8B, qwen3 8B weaker;
+gpt-oss failed). Owner set `OLLAMA_MAX_LOADED_MODELS=2` (a 400 on embedding came from Ollama
+holding one model). Fixes and re-audits: scope shared between suggestions and plans (`inScope`;
+files to review 89 → 26), index follows moved files, existing folders as categories, clustering
+tuned on real embeddings. Owner asked for vision (images only) and all four add-ons, then set
+the bar: "I am going to be the first user of this app… make sure atleast the app is competent
+and easy to use". Final audits on Downloads and `F:\Twtich Backup` → fixes listed in Decisions
+this checkpoint, with before/after numbers in Verified.
+
+Mistakes worth keeping: heredocs collapsed `\\` and wrote NUL bytes into a `.ts` file
+(memory note saved); a stray sandbox worker from the morning kept running old code, because
+stopping a background shell on Windows left its node process alive — the agent first called it
+the owner's, which was wrong.
+
+Commit: see git log (this checkpoint's commit follows `9455a63`).
 
 ### 2026-10-09 (2nd session, on the PC) — PC setup, Ollama only, classifier chosen
 

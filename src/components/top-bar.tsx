@@ -1,10 +1,16 @@
 import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { SonicControl } from "@/components/motif/sonic-control";
 import { ThemeToggle } from "@/components/motif/theme-toggle";
 import { VramGauge } from "@/components/motif/vram-gauge";
 
-/** VRAM budget from the spec (16 GB GPU). Becomes a setting with the model manager. */
+import { readGpuPicture } from "@/lib/ai/model-manager";
+import { serverEnv } from "@/lib/env";
+
+/** Shown until the card is measured, and when it can't be (no NVIDIA tools, Ollama off). */
 const VRAM_TOTAL_GB = 16;
+const GB = 1024 ** 3;
 
 /** The app's navigation: wordmark home, VRAM gauge, the sonic control, theme switch. */
 export function TopBar() {
@@ -18,9 +24,22 @@ export function TopBar() {
         Jugaad
       </Link>
       <div className="flex-1" />
-      <VramGauge usedGb={null} totalGb={VRAM_TOTAL_GB} />
+      <Suspense fallback={<VramGauge usedGb={null} totalGb={VRAM_TOTAL_GB} />}>
+        <LiveVram />
+      </Suspense>
       <SonicControl available={false} unavailableReason="Voice arrives in phase 2" />
       <ThemeToggle />
     </header>
+  );
+}
+
+/** The card's real memory use, read per request (nvidia-smi, else what Ollama holds). */
+async function LiveVram() {
+  await connection();
+  const gpu = await readGpuPicture(serverEnv.JUGAAD_OLLAMA_URL).catch(() => null);
+  return gpu ? (
+    <VramGauge usedGb={gpu.usedBytes / GB} totalGb={Math.round(gpu.totalBytes / GB)} />
+  ) : (
+    <VramGauge usedGb={null} totalGb={VRAM_TOTAL_GB} />
   );
 }

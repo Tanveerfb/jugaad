@@ -16,6 +16,10 @@ const serverEnvSchema = z
     JUGAAD_OLLAMA_URL: z.url().default("http://localhost:11434/v1"),
     /** Model for classification, exactly as `ollama list` names it. Default in lib/ai/models.ts. */
     JUGAAD_CLASSIFY_MODEL: z.string().min(1).optional(),
+    /** Model for embeddings (category suggestions). Default in lib/ai/models.ts. */
+    JUGAAD_EMBED_MODEL: z.string().min(1).optional(),
+    /** VRAM Jugaad's models may use together, in GB. Default: whatever the card has free. */
+    JUGAAD_VRAM_BUDGET_GB: z.coerce.number().positive().max(256).optional(),
     /** Where the database lives. Default: %LOCALAPPDATA%\Jugaad (see lib/data-dir.ts). */
     JUGAAD_DATA_DIR: z.string().min(1).optional(),
   });
@@ -27,6 +31,8 @@ export const serverEnv = parseOrExplain("server", serverEnvSchema, {
   JUGAAD_AI_PROVIDER: process.env.JUGAAD_AI_PROVIDER,
   JUGAAD_OLLAMA_URL: process.env.JUGAAD_OLLAMA_URL,
   JUGAAD_CLASSIFY_MODEL: process.env.JUGAAD_CLASSIFY_MODEL,
+  JUGAAD_EMBED_MODEL: process.env.JUGAAD_EMBED_MODEL,
+  JUGAAD_VRAM_BUDGET_GB: process.env.JUGAAD_VRAM_BUDGET_GB,
   JUGAAD_DATA_DIR: process.env.JUGAAD_DATA_DIR,
 });
 

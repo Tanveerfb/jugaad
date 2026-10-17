@@ -29,8 +29,8 @@ positioning — is Radix's; everything visible is the motif's.
 | `Table` | Plain zone — motif spacing and colours only | Plans use destination bays instead |
 | `Label` | Unchanged | |
 
-**Not built yet:** the signature component — the plan review as **destination bays** — is
-built with the Organiser in phase 1, from `docs/design/rounds/round-1.html`.
+The signature component — the plan review as **destination bays** — is built as a feature
+(`DestinationBays`, below), on the `shape-bay` utility in `globals.css`.
 
 ## Motif — `src/components/motif/`
 
@@ -40,7 +40,7 @@ built with the Organiser in phase 1, from `docs/design/rounds/round-1.html`.
 | `Roundel` | Hexagon with a glowing circle (2012 room); `glowing` / dim; `sm` `md` `lg` | Decorative, `aria-hidden` |
 | `NotchedPanel` | The motif's panel: chamfers + top-centre notch, or `shape="chamfered"` | Two-layer clip so the diagonal edges keep a border |
 | `StatusLight` | Light + word; `attention` / `working` / `idle` | Never colour alone |
-| `Rotor` | Job-progress ring: 18 segments, pulsing head, contra-rotating marks while `progress` is a number | `progress={null}` = idle, nothing turns |
+| `Rotor` | Job-progress ring: 18 segments, pulsing head, contra-rotating marks while `progress` is a number | `progress={null}` = idle, nothing turns; `compact` = 58px ring for a job row, no figure or outer marks |
 | `Ribs` | Fixed background of 18 radiating lines with a sweeping light | Rendered once, in the root layout |
 | `VramGauge` | Top-bar memory meter, aqua → orange; `usedGb={null}` = not measured | `role="meter"` |
 | `SonicControl` | Hold-to-talk control (pointer or Space/Enter); `available={false}` shows why in a tooltip | Client |
@@ -51,8 +51,9 @@ built with the Organiser in phase 1, from `docs/design/rounds/round-1.html`.
 | Component | What it is |
 | --- | --- |
 | `TopBar` | The app's navigation: wordmark home, VRAM gauge, sonic control, theme toggle |
-| `ModuleView` | The full view a module tile opens into — `NotchedPanel` sharing the tile's view-transition name, content materialises |
+| `ModuleView` | The full view a module tile opens into — `NotchedPanel` sharing the tile's view-transition name, content materialises | `title` + `back` for a screen inside the module ("Downloads · plan", back to the folder) |
 | `BackToWorkbench` | Icon key back to the workbench; runs the reverse morph (`module-close`); Escape does the same |
+| `LiveRefresh` | Refreshes the page every couple of seconds while a job runs — the store is the only channel to the worker. Used by the workbench and the Organiser |
 
 ## Features
 
@@ -60,4 +61,19 @@ built with the Organiser in phase 1, from `docs/design/rounds/round-1.html`.
 | --- | --- | --- |
 | `ModuleComb` | `src/features/workbench/` | The honeycomb of module tiles (diamond of four) — workbench navigation |
 | `ModuleHex` | `src/features/workbench/` | One tile: link + view-transition when the module has a view, inert when planned |
-| `JobPanel` | `src/features/workbench/` | Notched panel around the `Rotor`; idle until the job queue feeds it |
+| `JobPanel` | `src/features/workbench/` | Notched panel around the `Rotor`, showing the job running now (`getWorkbenchView`) or idle |
+| `FolderRail` | `src/features/organiser/` | The allow-list as a rail of cut-corner rows, the selected one lit; `AddFolderForm` at its foot (locked layout A) |
+| `AddFolderForm` | `src/features/organiser/` | Paste a path to add a folder; a refusal keeps the path and says why. `compact` for the rail |
+| `FolderStage` | `src/features/organiser/` | The selected folder: name, `StepTrack`, `IndexFacts`, `JobProgress`, `FolderActions` |
+| `StepTrack` | `src/features/organiser/` | Scanned → categories → plan → applied as hex nodes on a dashed line |
+| `IndexFacts` | `src/features/organiser/` | Files, size, duplicates (and online-only / locked when present) in mono figures |
+| `JobProgress` | `src/features/organiser/` | A job on the compact rotor with its line and Stop; stacks on a phone; says when the worker isn't running |
+| `FolderActions` | `src/features/organiser/` | The stage's one primary action plus the secondary ones |
+| `StatusWord` | `src/features/organiser/` | A folder's status as a `StatusLight` and word |
+| `CategoryEditor` | `src/features/organiser/` | Category rows (locked C1): tick to keep, rename in place, add, approve |
+| `BuildPlanPanel` | `src/features/organiser/` | "Sort N files into M folders", the Include subfolders tick box, Build plan |
+| `DestinationBays` | `src/features/organiser/` | **Signature.** One notched bay per destination: include ticks, confidence, rename ticks (R1), Send to… in the review bay, sticky approve bar |
+| `PlanHistory` | `src/features/organiser/` | Applied plans on the batch timeline with undo, failures and retry |
+| `SubfolderToggle` | `src/features/organiser/` | The folder's "Include subfolders" tick — suggestions and plans follow it |
+| `RemoveFolder` | `src/features/organiser/` | "Remove from list" with a confirming dialog; nothing on disk changes |
+| `WorkerNotice` | `src/features/organiser/` | Says, once, when the worker isn't running and how to start it |

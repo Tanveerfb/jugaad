@@ -43,8 +43,14 @@ function DialogContent({
       if (!(origin instanceof HTMLElement) || origin === document.body) return
       const from = origin.getBoundingClientRect()
       const box = node.getBoundingClientRect()
-      node.style.setProperty("--iris-x", `${from.left + from.width / 2 - box.left}px`)
-      node.style.setProperty("--iris-y", `${from.top + from.height / 2 - box.top}px`)
+      const x = from.left + from.width / 2 - box.left
+      const y = from.top + from.height / 2 - box.top
+      // the iris must reach the panel's farthest corner, wherever the control sits: a fixed 150%
+      // left a dialog opened from a button far to its right clipped on the left (2026-10-17)
+      const reach = Math.max(...[[0, 0], [box.width, 0], [0, box.height], [box.width, box.height]].map(([cx, cy]) => Math.hypot(cx - x, cy - y)))
+      node.style.setProperty("--iris-x", `${x}px`)
+      node.style.setProperty("--iris-y", `${y}px`)
+      node.style.setProperty("--iris-r", `${Math.ceil(reach) + 2}px`)
     },
     [ref]
   )

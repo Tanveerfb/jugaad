@@ -262,3 +262,279 @@ Ollama was listening on all interfaces, against private-by-default.
 
 **Declined: Ollama web search.** It sends queries to ollama.com and works as a model-driven tool
 loop — against private-by-default and "no open-ended agent loops". Owner: not needed.
+
+---
+
+## 2026-10-17 — Phase 1 plan, and how the safety layer moves files
+
+**Owner's choices at the start of phase 1** (question tool, all the recommended options):
+
+- **Organised files stay inside their allowed folder** — category subfolders (`Downloads\Invoices\`)
+  and a `_review` folder there. Matches the locked destination-bay mockup. Rejected: one
+  destination root (more cross-drive moves), a destination per folder (an extra field for now).
+- **A folder is added by pasting its path**, not by browsing in the app — a browser would list
+  folder names outside the allow-list. Explorer's "Copy as path" quotes are stripped.
+- **New dependencies for reading contents:** `unpdf` (PDF text), `mammoth` (Word `.docx`
+  text), `exifr` (photo date, camera, location present). Pinned exactly; `unpdf` at 1.8.1, not
+  1.9.0, which was two days old.
+- **The UI mockup round comes after the backend** (steps 1–6), so the mockups show real plan data.
+
+**Agent proposals, not yet contradicted by the owner:** embeddings by `qwen3-embedding:0.6b`
+(already installed; `nomic-embed-text` the fallback); **no SQLite vector extension in phase 1** —
+clustering needs the vectors in memory only; the extension is chosen in phase 3, which searches.
+
+**How a move is made** (`src/lib/safety/`):
+
+- **Check, then rename — never a hard link.** Windows' rename replaces an existing file, so the
+  target is checked first and a taken name fails the move. A link-then-unlink was considered for
+  an atomic no-overwrite, and rejected: with the file open elsewhere the unlink fails and leaves
+  two names, which the rollback can't always remove either. The check-to-rename gap is accepted
+  for a single-user tool.
+- **Across drives: copy (refusing to overwrite), compare SHA-256, keep the modified time, then
+  remove the original.** If removing the original fails, the copy Jugaad just made is removed —
+  the one place code removes a file, and it is never the owner's: it is the duplicate it created
+  seconds earlier, and the original is untouched.
+- **Capitals-only renames go through a stop-over name** (`<name>.jugaad-case`).
+- **Write-ahead journal:** every folder made, file moved, file moved back and empty folder
+  removed is journalled before it happens and closed after. SQLite triggers make the journal
+  append-only. A crash leaves entries open; the worker settles them against the disk before it
+  resumes anything, and never moves a file while doing so.
+- **Undo refuses a file changed since it was moved** (size or modified time differ) and removes
+  only folders this plan created, only when empty.
+- **A folder taken off the allow-list is kept in the database** (soft removal), with its plans
+  and journal; nothing in it is touched — not even an undo — until it is added back.
+
+**Scanning:** a file is read only when it is new or its size or modified time changed.
+**OneDrive online-only files** can't be recognised through Node's `stat` (it reports them as
+ordinary files — checked on the PC). PowerShell lists their attributes for exactly the folders
+the scanner walked; it never recurses itself, so it can't follow a junction out of the
+allow-list. If that check fails, the scan reads nothing. Junctions, links, protected folders
+(AppData, Jugaad's own data) and `.git` / `node_modules` are never entered.
+
+---
+
+## 2026-10-17 — Models, clustering and plans, measured on the sample folder
+
+All measured on the PC (RTX 5060 Ti 16 GB, Ollama 0.34.2) against the **sample folder** —
+`src/lib/organiser/fixtures/sample-folder.ts`: 48 invented files in 8 groups a person would
+make (bills, banking and tax, photos, screenshots, installers, study, recipes, career), each
+tagged with its right group. `src/lib/organiser/live.test.ts` re-runs it.
+
+**Classifier: `gemma4:12b-it-qat` stays** — the comparison phase 1 owed:
+
+| Model | Right | Warm, per file | VRAM |
+| --- | --- | --- | --- |
+| `gemma4:12b-it-qat` | **48 / 48** | 0.98 s | 8.02 GB |
+| `gemma4:e4b-it-qat` | 44 / 48 | 0.47 s | 3.28 GB |
+
+All four of e4b's misses were screenshots filed as photos **at 0.9 confidence** — confidently
+wrong, which the review threshold can't catch. Half a second per file is not worth that.
+
+**Embeddings: `qwen3-embedding:0.6b`, through Ollama's own `/api/embed` with a 4,096 context.**
+Ollama's app-wide 32k context applies to embedding models too and made this 0.6B model take
+5.78 GB; at 4,096 it takes 2.37 GB, ~80 ms a file in batches of 32. The AI SDK's
+OpenAI-compatible endpoint can't set a context size, so this one call goes to Ollama's API
+directly — still only inside `lib/ai/`. With the 12B, both stay loaded: ~10.4 GB plus the
+owner's ~2.3 GB of everyday apps.
+
+**Clustering, tuned on the sample folder** (share of files in a cluster whose majority is their
+own group):
+
+- qwen3 plain, k-means: 71% at 8 clusters, silhouette 0.24 — real embeddings score far below
+  textbook thresholds, and the first cut-off (0.25) put every file in one group.
+- `nomic-embed-text` did better plain (83%), but **qwen3 with its instruction prefix**
+  ("Instruct: Identify what kind of personal file this is and what it is for") reached 98%,
+  silhouette ~0.45. Kept the file type in the description (it helped the choice of count).
+- Vectors are **centred** before clustering (embeddings share a direction that makes
+  everything look alike), each count gets **8 k-means runs**, and among counts within 0.02 of
+  the best silhouette **the largest wins** — an extra category is easy to reject; two kinds of
+  file merged is easy to miss. "No real structure" is now a silhouette under 0.15.
+- Live result: 8 categories in 10 s — Bills and statements, Course materials, Recipes, Photos,
+  Installers, Screenshots, Job applications, Financial documents. The only overlap is the
+  realistic one: two bank documents grouped with bills.
+
+The embedding cache is keyed by model **and** a recipe tag (`grouping-1`), bumped whenever the
+embedded text or its instruction changes.
+
+**Model manager:** plans with these measured sizes (an unmeasured model is estimated at 1.25 ×
+its download plus 256 MB), the card's real free memory from `nvidia-smi`, and an optional
+`JUGAAD_VRAM_BUDGET_GB`. It unloads only models Jugaad itself loaded — another app's model is
+never touched — and otherwise refuses with the numbers ("needs 16.3 GB … 10.9 GB is free").
+Batching by model is per job: a job runs all its files through one model.
+
+**Plans — agent defaults, open to the owner's call** (each a one-line change):
+
+- **Only loose files at the top of an allowed folder are planned**; subfolders the owner made
+  are left as they are.
+- **Files keep their names.** The model's suggested name is not applied.
+- **Duplicates:** the oldest copy is sorted like any file; extra copies go to
+  `_review\Duplicates`. Doubtful answers (confidence under 0.6) and failed classifications go
+  to `_review`.
+- Building a new plan discards older plans that were never applied.
+
+---
+
+## 2026-10-17 — Owner's calls on plans: subfolders and renames
+
+Settling the agent's defaults above (question tool):
+
+- **"Include subfolders" is a tick box when building a plan.** Unticked (the default), only
+  the folder's own files are planned; ticked, files in subfolders too — except files already
+  in an approved category's folder or `_review`, which are where they belong. Owner: "an
+  option to either select all subfolders or files; if unchecked then only the contents in the
+  folder."
+- **Renames are per file, owner-ticked.** The model's suggested name is shown on each move,
+  unticked; ticking it changes only the name, kept unique in the plan. Owner: "it can suggest
+  names but user should be able to tick/untick for each file." A suggestion keeps the original
+  extension and is dropped when unusable or no different.
+- **Duplicates:** extra copies to `_review\Duplicates`, as proposed.
+
+---
+
+## 2026-10-17 — Organiser interface locked
+
+**Locked mockup: `docs/design/organiser.html`** (round 2; round 1 at `public/_mockups/organiser-r1.html`,
+gitignored). Built from the locked motif and component kit; the destination bays are the
+signature plan review chosen in the component round.
+
+Owner's choices from round 1 (two options each):
+
+- **Folders: A — a rail and a stage.** The allow-list as a rail of folders on the left; the
+  selected folder's steps (scanned → categories → plan → applied), numbers and next action on
+  the right. Chosen over B, a stacked panel per folder.
+- **Categories: C1 — rows.** Tick to keep, rename in place, examples beside each; an unticked
+  row is turned down. Chosen over C2, a honeycomb of cells with a side panel.
+- **Renames: R1 — a tick box under each file** with a suggestion ("Rename to …"). Chosen over
+  R2, an "Aa" key that swaps the name.
+- **"Send to…" on doubtful files** in the review bay — the agent's proposal, kept: a doubtful
+  file can be given a category in the plan instead of going to `_review`.
+- Owner's feedback during the round: on a phone, job progress stacks (rotor, then text, then
+  Stop) rather than sitting in a row.
+
+The screens add routes under `/organiser`: the folder view, and per folder its categories, its
+plan and its history. The mockup's own per-screen fade was removed after the owner found the
+text "barely visible" — paused in a background tab, it held the screen near transparent. The
+app keeps the locked motif's one-time materialise when a module view opens; at rest the
+content is fully opaque (checked in the browser).
+
+---
+
+## 2026-10-17 — Audit on the owner's Downloads, and what changed
+
+Run on the owner's real Downloads (1,407 files, 16.75 GB; 525 loose) at the owner's request,
+in the sandbox database — nothing approved or applied.
+
+**Before the fixes:** scan 33 s; suggestions 46 s with 12 categories that overlapped in name
+(Photos / Images, Webm videos / Videos, "Numbered images"); plan 9 min (1.03 s a file) with 89
+of 525 to review; a rename suggested for 380 files. Other models on 150 of the same files,
+against the 12B: e4b 73 % agreement, gemma4 8B 72 %, qwen3 8B 63 %, all more confident than
+the 12B while disagreeing with it; gpt-oss 20B answered nothing. **The 12B stays.**
+
+**Ollama held one model at a time** — a machine-wide `OLLAMA_MAX_LOADED_MODELS=1`. Every switch
+between the embedder and the 12B reloaded a model, and one embedding batch was refused mid-swap
+(HTTP 400). The owner set it to **2** (the 12B and the embedder together, ~10.4 GB); checked
+in Ollama's log and with both loaded at once. The embedder now also retries a refused batch
+once, and Ollama's own error text is kept in the message.
+
+**Fixes:**
+- **Categories are named all at once.** The clusters were distinct (closest centres 0.50); the
+  names overlapped because each group was named alone. One call now names every group side by
+  side, told never to give two the same meaning; clusters whose centres exceed 0.6 merge first.
+- **Renames are offered only for messy names** — copy markers, "final", generic or scanner
+  names, URL encoding, very long names (`looksMessy`), and never for a change of case or
+  separators. Camera and phone names are left alone: the model can't see a photo.
+- **Classifications are remembered** per file contents, model and approved category list.
+
+**After:** suggestions 37 s, 9 categories with no near-synonyms (WhatsApp photos, Random
+images, Work documents, Video clips, Webm files, Fonts, Configuration files, Numbered images,
+Python scripts); plan 9.6 min with **26** to review (from 89); renames offered **77** (from
+380) — e.g. a hash-named PDF → "SimetrixDT_Engineering_Certainty_Brochure.pdf"; **rebuilding
+the plan: 0 s**. Sample folder still right: 8 categories, all distinct.
+
+**Still open:** "Random images" (272 loose files) is a catch-all, and "Numbered images" names
+UI icons poorly — images without text give the models little to go on; a vision model is the
+likely fix (spec: phase 1 optional, "a small vision model describes images").
+
+---
+
+## 2026-10-17 — Built for the owner's own folders
+
+The owner is the first user ("if I don't like it I can't distribute it"), with two real
+targets: `C:\Users\Tanve\Downloads` (1,407 files, 16.75 GB) and `F:\Twtich Backup` (1,514 files,
+384 GB, 506 MP4s — 248 GB of Twitch VODs — on a 5 TB drive; already organised into 11
+subfolders, 35 loose files). What they needed, and what changed:
+
+- **"Include subfolders" lives on the folder** (owner's choice). Suggestions and plans follow
+  the same tick, so categories are suggested from the files that get sorted. With captions,
+  Downloads had 217 of 525 to review because categories came from every file (213 photos almost
+  all in subfolders) while plans sorted only loose ones. A small change to the locked design:
+  the tick moved from the build panel to the folder's stage; the build panel says which files
+  and links back.
+- **Fast scans.** Only files of the same size can be duplicates: they get a full SHA-256, every
+  other file a quick fingerprint (size + first and last MB, `q:` prefix); a twin appearing later
+  triggers the full hash. Reading all of a 384 GB VOD folder would have taken ~40 min.
+- **Existing subfolders are categories** ("your folder"), offered first; the namer reuses their
+  exact names for groups that belong in them.
+- **Videos: length and resolution** (owner's choice over frames) via ffprobe — tells VODs, clips
+  and shorts apart without the GPU.
+- **Add-ons (owner picked all four):**
+  - Archives listed with Windows' own `tar` (bsdtar — Git's GNU tar on the PATH can't read zip),
+    programs' version info via PowerShell.
+  - Text-less PDFs (scans): page 1 rendered with `@napi-rs/canvas` (new dependency, 1.0.10,
+    pinned; 1.0.11 was under two weeks old) and captioned by the 12B.
+  - **Learning from corrections:** "Send to…" records the file and where it went. That file goes
+    there again on later plans; similar files (word overlap) are shown up to 6 such decisions as
+    examples. The classification cache key includes which examples a file was shown, so a new
+    correction re-sorts only the files near it.
+  - **Projects kept whole:** a folder holding a marker (package.json, pyproject.toml, .sln,
+    .uproject, .blend, .prproj, .aep…) is never sorted file by file; with subfolders included it
+    moves as one folder (a same-drive rename, journalled, undone as one; across drives a folder
+    doesn't move). Projects are never offered as categories.
+- **Images only from files in scope** — the Twitch folder's ~850 subfolder images aren't looked
+  at while only its 35 loose files are being sorted.
+- **Usability:** `npm run app` starts the app and the worker together; every Organiser screen
+  says when the worker isn't running; a folder can be removed from the list (confirmed; nothing
+  on disk changes; history returns if re-added); the workbench tile, job panel and VRAM gauge
+  show live state.
+- **Errors split:** a server that answers with an error ("rejected" — e.g. a WebP Ollama can't
+  decode) skips that file; only a server that isn't there ("unreachable") stops a job. One odd
+  WebP had stopped a whole image run.
+- **Dialog fix (restores the locked design):** the iris grew to a fixed 150 % around the opening
+  control, so a dialog opened from a button far to its right was clipped on the left; it now
+  reaches the farthest corner, and the panel's notched shape returns once open.
+
+## 2026-10-17 — Existing folders offered only when they fit
+
+The real Downloads audit offered all 15 of the owner's subfolders as ticked categories, including
+font folders (`Google_Sans_Flex,Quicksand`), a one-file `CD Projekt RED Goodies` and the hidden
+`.remember` — and the plan then filed loose files into them. Now an existing folder is pre-ticked
+only when the namer put a group of loose files in it; the rest are listed after the new
+suggestions, unticked ("your folder — tick to let new files join it"), so the owner can still
+choose them. Hidden dot-folders are never offered.
+
+## 2026-10-17 — The classifier sees what each existing folder holds
+
+On the Twitch Backup audit, 10 OBS recordings (`2023-07-03_19-19-43.mp4`…) went to review: the
+model, shown only folder names, wavered between "Recorded" and "Unprocessed Clips" at 0.3–0.4,
+while `Recorded` held files named exactly like them. Each approved category that exists as a
+folder is now listed with up to 4 of its file names, picked evenly across the folder
+(`folderSamples`). Re-run on the same folder: review 16 → 2, all 10 recordings to `Recorded` at
+0.8. The answer cache key moved to `3:`, so the first plan after this re-sorts once.
+
+Also: a file going to review gets no rename suggestion — a model unsure where a file goes is no
+surer what it is (the audit offered `Commercial_Kitchen_Photo.jpg` for an unknown screenshot).
+
+## 2026-10-17 — Re-run findings fixed
+
+- **Files that stay put.** The Downloads re-run planned to move `desktop.ini` — the file that gives
+  Downloads its icon and name. Folder metadata (`desktop.ini`, `Thumbs.db`, `.DS_Store`) and
+  downloads still being written (`.crdownload`, `.part`…) are now never sorted (`isFolderOwned`,
+  through `inScope`, so suggestions and plans both skip them).
+- **Suggesting again doesn't offer near-twins.** With categories already approved, a second
+  suggestion offered "University notes" beside "Study" and "Phone photos" beside "Photos": the
+  namer saw only the folder's subfolders. It now also sees the categories the owner chose, turned
+  down or added, and a group it names after one of them is not suggested again.
+- **Counts say "1 file".** `countOf` (`src/lib/count-of.ts`) for every count the interface shows.
+- **Images go to the model as a `file` part** (AI SDK 7 deprecates the `image` part;
+  `AISDK_DEP_IMAGE_CONTENT_PART`). Checked live: the 12B still captions; a vision check joins
+  `src/lib/ai/live.test.ts`.

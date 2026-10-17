@@ -1,6 +1,7 @@
 import type { WorkbenchAi } from "@/lib/ai";
 import type { WorkbenchStore } from "@/lib/data";
 import { log } from "@/lib/log";
+import { reconcileJournal } from "@/lib/safety/reconcile-journal";
 import { handlerFor, type JobHandler } from "./job-handlers";
 
 export type WorkerOptions = {
@@ -10,6 +11,8 @@ export type WorkerOptions = {
   pollMs?: number;
   /** How often to write the heartbeat the app reads. */
   beatMs?: number;
+  /** How often a running job checks whether the owner stopped it. */
+  cancelPollMs?: number;
   /** Overrides the registry — tests only. */
   handlers?: (job: Parameters<typeof handlerFor>[0]) => JobHandler | undefined;
 };
@@ -20,12 +23,12 @@ export type RunningWorker = {
 };
 
 /**
- * The worker loop: recover jobs a crash left running, then claim queued jobs one at a time
- * (spec: batch by model, never fight over VRAM — one at a time is the phase 0 floor) and
- * beat so the app can tell it is alive. All state goes through the store (SQLite) — the
- * channel the owner chose.
+ * The worker loop: recover jobs a crash left running, settle its half-recorded disk changes,
+ * then claim queued jobs one at a time (spec: batch by model, never fight over VRAM) and beat
+ * so the app can tell it is alive. A job the owner stops is aborted within `cancelPollMs`.
+ * All state goes through the store (SQLite) — the channel the owner chose.
  */
-export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, handlers = handlerFor }: WorkerOptions): RunningWorker {
+export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, cancelPollMs = 1000, handlers = handlerFor }: WorkerOptions): RunningWorker {
   const startedAt = new Date().toISOString();
   const stopping = new AbortController();
 
@@ -38,6 +41,9 @@ export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, handlers 
   log("worker.started", { pid: process.pid, provider: ai.provider });
 
   const loop = (async () => {
+    // before any job resumes: settle disk changes a crash left half-recorded
+    const reconciled = await reconcileJournal(store);
+    if (reconciled) log("worker.reconciled", { entries: reconciled });
     while (!stopping.signal.aborted) {
       const job = store.claimNextJob();
       if (!job) {
@@ -51,18 +57,26 @@ export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, handlers 
         continue;
       }
       log("job.started", { id: job.id, kind: `${job.module}/${job.kind}` });
+      // the owner's Stop cancels the job in the store; the worker notices and aborts the handler
+      const cancelled = new AbortController();
+      const watch = setInterval(() => {
+        if (store.getJob(job.id)?.status === "cancelled") cancelled.abort();
+      }, cancelPollMs);
       try {
-        await handler({ job, store, ai, signal: stopping.signal });
+        await handler({ job, store, ai, signal: AbortSignal.any([stopping.signal, cancelled.signal]) });
         if (stopping.signal.aborted) {
           // shutting down mid-job: leave it running; the next start requeues it
           break;
         }
         if (store.getJob(job.id)?.status === "running") store.transitionJob(job.id, "done");
-        log("job.done", { id: job.id });
+        log(cancelled.signal.aborted ? "job.cancelled" : "job.done", { id: job.id });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (store.getJob(job.id)?.status === "running") store.transitionJob(job.id, "failed", message);
-        log("job.failed", { id: job.id, reason: message });
+        const status = store.getJob(job.id)?.status;
+        if (status === "running") store.transitionJob(job.id, "failed", message);
+        log(status === "cancelled" ? "job.cancelled" : "job.failed", { id: job.id, reason: message });
+      } finally {
+        clearInterval(watch);
       }
     }
   })();

@@ -39,3 +39,49 @@ describe.skipIf(!live)(`live ${provider} model`, () => {
     expect(result.suggestedName.endsWith(".pdf")).toBe(true);
   });
 });
+
+describe.skipIf(!live)(`live ${provider} vision`, () => {
+  it("captions an image it is sent", { timeout: 120_000 }, async () => {
+    const { createCanvas } = await import("@napi-rs/canvas");
+    const canvas = createCanvas(256, 256);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#1e3a8a";
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(128, 128, 80, 0, Math.PI * 2);
+    ctx.fill();
+    const model = { provider: "ollama" as const, baseURL, modelId: process.env.JUGAAD_LIVE_MODEL ?? "", maxOutputTokens: 60, timeoutMs: 110_000, reasoning: "none" as const };
+    const ai = createAiSdkAi(model, undefined, model, model);
+    const { caption } = await ai.describeImage({ image: new Uint8Array(canvas.toBuffer("image/png")), mediaType: "image/png", fileName: "shape.png" });
+    process.stdout.write(`\n[live] caption: ${caption}\n`);
+    expect(caption).toMatch(/circle|red|round|dot/i);
+  });
+});
+
+describe.skipIf(!live)("live embeddings", () => {
+  it("puts similar files closer together than unrelated ones", { timeout: 120_000 }, async () => {
+    const { createOllamaEmbedder } = await import("./ollama-embedder");
+    const { dot } = await import("@/lib/domain/vectors");
+    const embedder = createOllamaEmbedder({
+      baseURL,
+      modelId: process.env.JUGAAD_LIVE_EMBED_MODEL ?? "qwen3-embedding:0.6b",
+      numCtx: 4096,
+      batchSize: 32,
+      timeoutMs: 110_000,
+      forGrouping: (t) => t,
+    });
+    const started = performance.now();
+    const [invoiceA, invoiceB, photo] = await embedder.embedTexts([
+      "Invoice_0423_final.pdf — Tax invoice no. 0423, total due $412.00",
+      "electricity-bill-march.pdf — Amount payable 186.40, due 14 April",
+      "IMG_2001.jpg — photo taken 2024-05-01 on Google Pixel 8",
+    ]);
+    const ms = Math.round(performance.now() - started);
+    process.stdout.write(
+      `\n[live] invoice~bill ${dot(invoiceA, invoiceB).toFixed(3)}, invoice~photo ${dot(invoiceA, photo).toFixed(3)} in ${ms} ms\n`,
+    );
+    expect(dot(invoiceA, invoiceB)).toBeGreaterThan(dot(invoiceA, photo));
+    expect(Math.hypot(...invoiceA)).toBeCloseTo(1);
+  });
+});

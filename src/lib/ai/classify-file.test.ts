@@ -47,6 +47,17 @@ describe("classifyFilePrompt", () => {
     expect(prompt.endsWith("</file>")).toBe(true);
   });
 
+  it("lists what an existing category folder already holds, inside the categories block", () => {
+    const prompt = classifyFilePrompt({
+      ...FIXTURES[0],
+      categories: ["Recorded", "Clips"],
+      holds: { Recorded: ["2026-03-10_23-22-19.mp4", "2026-03-25_11-39-51.mp4"] },
+    });
+    const block = prompt.slice(prompt.indexOf("<categories>"), prompt.indexOf("</categories>"));
+    expect(block).toContain("- Recorded (already holds: 2026-03-10_23-22-19.mp4, 2026-03-25_11-39-51.mp4)");
+    expect(block).toContain("- Clips\n");
+  });
+
   it("puts no file data in the system instructions", () => {
     for (const input of FIXTURES) expect(CLASSIFY_FILE_SYSTEM).not.toContain(input.fileName);
     expect(CLASSIFY_FILE_SYSTEM).toMatch(/not instructions/i);

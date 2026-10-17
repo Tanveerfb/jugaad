@@ -23,7 +23,7 @@ docs before writing code) applies to Claude Code too.
   for scope, phases and what done means
 - **Repo**: https://github.com/Tanveerfb/jugaad, branch `master` (no live users — work on `master`)
 - **Deploys**: nowhere. Runs locally only (`npm run dev` / `npm start` on the owner's PC)
-- **Area files**: none · **Map**: not yet (`docs/architecture.md` arrives with the core in phase 1)
+- **Area files**: none · **Map**: `docs/architecture.md`
 - **Trello board**: https://trello.com/b/2poFG0U9/jugaad
 - **Motif**: Universe-inspired — *Doctor Who* "Honeycomb console", locked 2026-10-08, recorded
   in `design-system.md` (binding); locked mockup `docs/design/motif.html`. `PRODUCT.md` is the
@@ -63,6 +63,7 @@ no git). Project-specific:
 ## Commands
 
 ```bash
+npm run app            # how the owner runs Jugaad: the built app and the worker together (builds first if needed)
 npm run dev            # Next.js dev server, http://127.0.0.1:3000 — loopback only (§AI exception)
 npm run worker         # the job worker (tsx); worker:dev restarts on change. Run beside dev
 npm run build          # production build — verify after changes
@@ -70,8 +71,10 @@ npm run lint           # eslint
 npm test               # vitest run — unit tests, mock model only, no GPU needed
 ```
 
-Live model check (opt-in, needs Ollama running):
-`JUGAAD_LIVE_AI=1 JUGAAD_LIVE_MODEL=gemma4:12b-it-qat npx vitest run src/lib/ai/live.test.ts`
+Live model checks (opt-in, need Ollama running and the GPU free — ask the owner first):
+`JUGAAD_LIVE_AI=1 JUGAAD_LIVE_MODEL=gemma4:12b-it-qat npx vitest run src/lib/ai/live.test.ts src/lib/organiser/live.test.ts`
+— the first checks classifying, image captions and embeddings; the second runs suggestions and
+the 48-file sample folder, printing the score.
 
 **Do not use `npm run lint` to validate builds — use `npm run build`.** Lint includes the
 §NAMING filename rule (`eslint-plugin-check-file`).
@@ -97,8 +100,17 @@ Verified against `package.json`, 2026-10-08.
 ## Architecture — the patterns that are load-bearing here
 
 - **The app and the worker share state only through `WorkbenchStore` (`src/lib/data/`).** No
-  SQL outside it, no second channel (owner's choice). Job statuses change only through the
-  lifecycle in `src/lib/domain/job-lifecycle.ts`.
+  SQL outside it, no second channel (owner's choice). Statuses — jobs, plans, moves,
+  categories — change only through their lifecycles in `src/lib/domain/`.
+- **Every disk change goes through `src/lib/safety/`** (`applyPlan` / `undoPlan`): re-checked
+  against the allow-list (`path-guard.ts`), journalled before it happens and closed after,
+  never overwriting (`moveFile`). Nothing else renames, moves or removes a file. The worker
+  settles open journal entries before it resumes any job.
+- **Nothing reads a file without the allow-list.** The scanner (`src/lib/files/`) walks only
+  allowed folders, skips junctions, protected folders and `.git` / `node_modules`, and reads
+  nothing if the OneDrive placeholder check fails — a read would download the file.
+- **A job that uses a model calls `prepareModel` first** (`src/lib/ai/model-manager.ts`), which
+  keeps to the VRAM budget and unloads only Jugaad's own models.
 - **The app binds to 127.0.0.1** (`-H` in the scripts). That is what the §AI exception in
   `conventions.md` rests on — never remove it.
 - **Every model call goes through `getAi()` in `src/lib/ai/`.** Nothing else imports `ai` or
@@ -122,7 +134,10 @@ Verified against `package.json`, 2026-10-08.
 
 - Motif primitives in `src/components/motif/`, listed in `components.md`.
 - Pure logic (no React) in `src/lib/` and `src/lib/domain/`, with `*.test.ts` beside it.
+- Core services in `src/lib/` (`data`, `files`, `safety`, `ai`); the Organiser's own logic in
+  `src/lib/organiser/`. Worker job kinds are registered in `src/worker/job-handlers.ts`.
 - Zod schemas in `src/schemas/`; domain types are inferred from them.
+- Every count the interface shows goes through `countOf` (`src/lib/count-of.ts`) — "1 file", not "1 files".
 
 ## Things to avoid
 
@@ -142,6 +157,13 @@ Verified against `package.json`, 2026-10-08.
   build (or `next dev`) has generated `.next/` types. Build first; it is not a code error.
 - In Claude Code's Bash tool, `cd` can fail with fnm's "can't find the necessary environment
   variables" — use `builtin cd`.
+- **`cacheComponents` is on: a store read in a page needs `await connection()` inside a
+  `<Suspense>`**, or `node:sqlite`'s synchronous read runs once at build time and the page
+  shows stale data. The Organiser pages follow this pattern.
+- **Only one `next dev` per folder.** To try the Organiser without touching the real database,
+  stop `jugaad-dev` and start `jugaad-dev-sandbox` (`.claude/launch.json`: data in
+  `node_modules/.cache/jugaad-sandbox/data`), and run the worker with the same
+  `JUGAAD_DATA_DIR`.
 - **`next dev` sometimes serves a stale `globals.css`** after edits (seen twice, 2026-10-09):
   new tokens read empty, or the server and client render different components. Restart
   the dev server before debugging styles.
