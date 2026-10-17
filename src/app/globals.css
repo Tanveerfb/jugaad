@@ -320,11 +320,6 @@ html:active-view-transition-type(module-close)::view-transition-new(.module-morp
   to { stroke-dashoffset: 100px; }
 }
 
-/* the light sweeping across the background ribs */
-@keyframes rib-chase {
-  0%, 6% { opacity: 0.16; }
-  3% { opacity: 0.5; stroke: var(--primary); }
-}
 
 /* Reduced motion: every animation off; nothing essential is carried by motion alone. */
 @media (prefers-reduced-motion: reduce) {

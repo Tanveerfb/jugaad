@@ -7,15 +7,15 @@ rewritten in place every checkpoint. The session log is append-at-top, newest fi
 
 ## Start here
 
-**State:** Phase 1 is built and the owner has used it for real: their Downloads plan applied,
-825 of 825 files moved. That run also moved 288 files out of 7 of their own folders (unticked
-while "Include subfolders" was on) — now warned about, with a "Put back" built for it. Settings
-page and VRAM panel added. All committed (newest log entry).
-**Next:** the owner clicks **Put back 288 files** on Downloads → History, then checks the 7
-folders are whole (Open items 1).
-**Blocked on:** the owner — Put back changes their real folder, so it's theirs to click.
-**Don't trust:** Put back and undo on a real folder (unit-tested; never run on a real one);
-model changes on `/settings` beyond the UI (no job has run with a non-default model yet).
+**State:** Phase 1 is done and proven on the owner's real Downloads: 825 files sorted, then the
+288 that had been taken out of their own folders put back (all 7 folders whole again). Settings
+page, VRAM panel and subfolder warnings in use. Background ribs are now still (their sweep was
+the flicker the owner saw). All committed (newest log entry).
+**Next:** the owner picks: Twitch Backup, or folders that are a set moving whole (Open items 1–2).
+**Blocked on:** nothing.
+**Don't trust:** a job run with a model changed on `/settings` (only the screen was checked);
+a whole-plan undo on a real folder (Put back, a partial undo, is proven; the full one is
+unit-tested).
 
 > **Things that will save a session:** the map is `docs/architecture.md`. The spec lives in
 > `Tanveerfb/project-plans` (`plans/jugaad/`). **Never approve, apply or undo on the owner's
@@ -55,8 +55,10 @@ default; never deletes a file.
   models only).
 - **Models (defaults):** `gemma4:12b-it-qat` sorts, names and captions; `qwen3-embedding:0.6b`
   groups. Mock unless `JUGAAD_AI_PROVIDER=ollama`.
-- **Owner's real data:** Downloads added and organised (825 moves, plan applied; Put back of 288
-  pending). Twitch Backup not added yet.
+- **Owner's real data:** Downloads organised — 537 loose files sorted; the 288 files first taken
+  out of 7 of the owner's folders were put back. Twitch Backup not added yet.
+- **Motion:** content still materialises in three pulses on opening; the background ribs no
+  longer sweep (`decisions.md`, "Background ribs are still").
 
 ---
 
@@ -69,6 +71,9 @@ back"; earlier phase-1 entries above it).
   models only; a model per job; subfolder warnings on the tick and on the categories list;
   restore by "Put back" (only files moved out of their folders), not a full undo.
 - Plan lifecycle gained `undoing → applied` (partial undo).
+- Background ribs: the sweep removed (owner saw it as constant flicker on the panels). Tried and
+  dropped on the way: a single-fade opening (reverted at the owner's request) and moving the ribs
+  to their own compositing layer (didn't help).
 - Bug fixed: hidden folders were sorted (8 files left `.remember`).
 - Worker now loads `.env.local` itself — under `npm run app` it had been on the mock model.
 
@@ -76,19 +81,17 @@ back"; earlier phase-1 entries above it).
 
 ## Open items
 
-1. **Put back on Downloads** (owner clicks it), then check the 7 folders ·
-   [card](https://trello.com/c/CDtWIOZF/11-settings-page-vram-panel-subfolder-warnings-put-back)
-2. **Phase 1 sign-off** — first real run done; in Review until Put back / undo are seen working
-   on a real folder · [card](https://trello.com/c/1uunz8dK/3-phase-1-core-organiser)
-3. **Folders that are a set should move whole** — the run split two font folders and a property
+1. **Twitch Backup** — the owner's second folder, not added yet.
+2. **Folders that are a set should move whole** — the run split two font folders and a property
    photo set. Fonts (`.ttf` + licence) could join the project markers. Not started.
+3. **Settings in use** — a job run with a model changed on `/settings` · in Review ·
+   [card](https://trello.com/c/CDtWIOZF/11-settings-page-vram-panel-subfolder-warnings-put-back)
 4. **Broad catch-all categories** — "Documents" took 117 Downloads files in the real run ·
    [card](https://trello.com/c/jEq1MNE6/10-organiser-break-up-broad-catch-all-categories)
-5. **Twitch Backup** — the owner's second folder, not added yet.
-6. **Update project-plans** · [card](https://trello.com/c/hlHkpgPp/8-update-project-plans-for-jugaad)
-7. **Remaining models** (triage, reasoning, speech) · [card](https://trello.com/c/NKSDyjvb/7-choose-exact-models-on-the-pc)
-8. **`npm audit` findings and install-script warnings** · [card](https://trello.com/c/Mng9loKR/9-review-npm-audit-findings-and-install-script-warnings)
-9. `npm run app` prints a Node `DEP0190` warning (child process with `shell: true`) — harmless, noisy.
+5. **Update project-plans** · [card](https://trello.com/c/hlHkpgPp/8-update-project-plans-for-jugaad)
+6. **Remaining models** (triage, reasoning, speech) · [card](https://trello.com/c/NKSDyjvb/7-choose-exact-models-on-the-pc)
+7. **`npm audit` findings and install-script warnings** · [card](https://trello.com/c/Mng9loKR/9-review-npm-audit-findings-and-install-script-warnings)
+8. `npm run app` prints a Node `DEP0190` warning (child process with `shell: true`) — harmless, noisy.
 
 ---
 
@@ -104,6 +107,11 @@ back"; earlier phase-1 entries above it).
   capability, change notes and the "fits together" bar (16.7 GB "too big" with qwen3:8b for
   sorting); History shows the Put back block with the real 7 folders; the subfolder warnings show
   on Downloads. `/settings` checked at 390 px — no sideways scroll.
+- **Put back on the real Downloads** (the owner clicked it): plan still applied, 537 moved, 288
+  undone, 0 errors; on disk all 288 back at their original paths, none left at a destination;
+  the 7 folders hold 146, 69, 56, 8, 6, 2 and 1 files — exactly their counts before the run.
+- Flicker: with the ribs still, the owner sees none (their check). The opening pulses are back
+  (0.68 s `materialise`, checked in the browser).
 - Live checks from earlier this session still stand (classify, captions through the `file` part,
   embeddings; the two read-only audits) — see the newest log entry.
 
@@ -111,7 +119,7 @@ back"; earlier phase-1 entries above it).
 
 ## Assumed, not verified
 
-- Put back and whole-plan undo on the owner's real folder (unit-tested only).
+- Whole-plan undo on the owner's real folder (unit-tested; Put back proved the same code path in part).
 - A job run with a non-default model chosen on `/settings`.
 - Cross-drive moves on real large videos (unit-tested; never run on 400 GB).
 
@@ -121,12 +129,25 @@ back"; earlier phase-1 entries above it).
 
 The Organiser worked end to end on the owner's real Downloads; the gap it exposed (own folders
 emptied with subfolders on) is now warned about and reversible. The new settings and VRAM
-screens were seen working in the browser. What's still unproven on real data is any undo.
+screens were seen working in the browser, and Put back restored the owner's folders exactly.
 Coming back cold: read Start here, then `docs/architecture.md`, then the tail of `decisions.md`.
 
 ---
 
 ## Session log
+
+### 2026-10-17 (3rd session, end) — Put back on the real folder, background flicker
+
+The owner clicked **Put back**: all 288 files returned to their 7 folders (checked in the record
+and on disk, counts match). Phase 1 card to Done. The owner then reported flicker on the
+Organiser panel. Idle pages showed no DOM changes or refreshes; the only motion was the ribs'
+sweep. Tried in order: a single-fade opening (owner's pick) — still flickered; ribs on their own
+compositing layer — still; ribs still (owner's pick) — **gone**. The owner then asked to undo the
+other changes: the three-pulse opening is back, the layer tweak removed. A false lead on the way:
+the agent's Browser pane, hidden behind the owner's window, never revealed streamed content, so
+pages there showed loading placeholders forever — not a bug in the app.
+
+Commit: see git log (follows `51722c9`).
 
 ### 2026-10-17 (3rd session, continued) — owner's first real run, settings, VRAM, put back
 

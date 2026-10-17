@@ -564,3 +564,24 @@ drop-down, M1 rows; `docs/design/history-put-back.html`).
   with "." is now never in scope (`isHidden`).
 - Also: the worker loads `.env.local` itself (it ran on the mock model under `npm run app`
   while the app used Ollama); `ActionResult` moved to `src/lib/action-result.ts` (second user).
+
+## 2026-10-17 — Content fades in once instead of pulsing
+
+The owner saw the "materialise" effect (content arriving in three opacity pulses, 680 ms, from
+the locked motif) as flicker. Their pick from four options: one soft fade, 250 ms. Loading
+skeletons keep the pulse — there it says "still loading". The morph and the ribs are unchanged.
+
+## 2026-10-17 — Background ribs are still
+
+The owner saw constant flicker on the Organiser panel. The page itself never changed (no DOM
+changes, no refreshes while idle); the only motion was the ribs' sweep — each line flashing
+orange in turn, every 7.2 s, behind and around the panels. Moving the ribs to their own
+compositing layer didn't help. The owner's pick: keep the 18 lines, no sweep.
+Confirmed the same day: with the ribs still, the owner sees no flicker.
+
+## 2026-10-17 — Content pulses back in, as designed
+
+Once the ribs' sweep was found to be the flicker, the owner asked for the other changes made
+while looking for it to be undone: content materialises again in three soft pulses (680 ms),
+and the ribs carry no compositing-layer tweak. The "Content fades in once" entry above is
+reversed; "Background ribs are still" stands.

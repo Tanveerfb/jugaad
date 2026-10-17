@@ -4,7 +4,8 @@ const LINES = ribLines();
 
 /**
  * The background: 18 faint ribs fanning down from above the page, after the 2012 console
- * room, with a light sweeping across them in turn. Decorative only.
+ * room. Still — the light that swept across them read as constant flicker on the panels above
+ * (owner, 2026-10-17). Decorative only.
  */
 export function Ribs() {
   return (
@@ -20,7 +21,6 @@ export function Ribs() {
           {...l}
           vectorEffect="non-scaling-stroke"
           className="stroke-rib opacity-[0.16] [stroke-width:1]"
-          style={{ animation: "rib-chase 7.2s linear infinite", animationDelay: `${i * 0.4}s` }}
         />
       ))}
     </svg>

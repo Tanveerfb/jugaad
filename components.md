@@ -42,7 +42,7 @@ The signature component — the plan review as **destination bays** — is built
 | `NotchedPanel` | The motif's panel: chamfers + top-centre notch, or `shape="chamfered"` | Two-layer clip so the diagonal edges keep a border |
 | `StatusLight` | Light + word; `attention` / `working` / `idle` | Never colour alone |
 | `Rotor` | Job-progress ring: 18 segments, pulsing head, contra-rotating marks while `progress` is a number | `progress={null}` = idle, nothing turns; `compact` = 58px ring for a job row, no figure or outer marks |
-| `Ribs` | Fixed background of 18 radiating lines with a sweeping light | Rendered once, in the root layout |
+| `Ribs` | Fixed background of 18 faint radiating lines, still | Rendered once, in the root layout |
 | `VramGauge` | Top-bar memory meter, aqua → orange; `usedGb={null}` = not measured | `role="meter"`; `VramMeter` is its look alone, wrapped by `VramPanel` once measured |
 | `SonicControl` | Hold-to-talk control (pointer or Space/Enter); `available={false}` shows why in a tooltip | Client |
 | `ThemeToggle` | Sun / moon icon key; icon and label follow `<html data-theme>` via CSS | Client; saves to `localStorage` |

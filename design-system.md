@@ -27,7 +27,8 @@ locked at round 2 of the mockup loop. See `decisions.md`.
     *materialises* in three soft opacity pulses. Closing reverses the morph.
   - **Rotor** — the job-progress ring: 18 segments (the room's 18 ribs), leading segment
     pulses, two rings of original marks turning in opposite directions.
-  - **Ribs** — 18 faint lines radiating from above the page, a light sweeping across them.
+  - **Ribs** — 18 faint lines radiating from above the page, still (the sweeping light was
+    removed 2026-10-17: it read as constant flicker on the panels above).
   - **Sonic control** — the one control for push-to-talk (and later scanning): original slim
     tool glyph, tip glows while live, a soundwave line runs.
   - **Roundels** — hexagon with a glowing circle over it (the 2012 room's actual roundel);
@@ -83,7 +84,7 @@ Measured contrast (WCAG): text on surface 13.6:1 dark / 14.0:1 light; muted on s
 **Shape:** chamfer 18px on panels, 7px on buttons; hexagons flat-top, height = width × 0.866.
 
 **Motion:** ease `cubic-bezier(.16, 1, .3, 1)`; 160ms fast, 240ms standard, 520ms module
-open. Edge chase 3.6s per lap (lit), 1.1s (hover). Rib sweep 7.2s. Rotor rings 30s / 22s.
+open. Edge chase 3.6s per lap (lit), 1.1s (hover). Rotor rings 30s / 22s.
 Materialise 680ms.
 
 
