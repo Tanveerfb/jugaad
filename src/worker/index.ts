@@ -1,3 +1,4 @@
+import "./load-env-file"; // first: the settings below read process.env as they load
 import { getAi } from "@/lib/ai";
 import { releaseModels } from "@/lib/ai/model-manager";
 import { databasePath, getStore } from "@/lib/data";
@@ -11,7 +12,8 @@ import { startWorker } from "./run-worker";
  */
 const store = getStore();
 log("worker.database", { path: databasePath() });
-const worker = startWorker({ store, ai: getAi() });
+// each job uses the models chosen on the settings page when it starts
+const worker = startWorker({ store, ai: () => getAi(store.getModelChoices()) });
 
 let stopping = false;
 async function shutdown(signal: string) {
@@ -19,7 +21,7 @@ async function shutdown(signal: string) {
   stopping = true;
   log("worker.stopping", { signal });
   await worker.stop();
-  await releaseModels(); // hand the GPU back
+  await releaseModels(store); // hand the GPU back
   store.close();
   process.exit(0);
 }

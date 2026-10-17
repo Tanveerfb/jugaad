@@ -1,10 +1,10 @@
 import { serverEnv } from "@/lib/env";
+import type { ModelChoices } from "@/schemas/settings-schema";
 import type { AiProviderName } from "./types";
 
 /**
- * Task → provider and model, in one place (project-rules §AI). Phase 0 reads environment
- * variables; when the settings store exists (phase 1) the owner's in-app choice overrides
- * them (spec: "chosen in settings").
+ * Task → provider and model, in one place (project-rules §AI). The owner's choice on the
+ * settings page wins, then `.env.local`, then the defaults below (spec: "chosen in settings").
  */
 export type TaskModel = {
   provider: AiProviderName;
@@ -38,7 +38,7 @@ const CAPS: Record<AiTask, Pick<TaskModel, "maxOutputTokens" | "timeoutMs" | "re
  * `gemma4:e4b-it-qat` scored 44 of 48, calling screenshots photos at 0.9 confidence
  * (decisions.md, 2026-10-17); it stays available through JUGAAD_CLASSIFY_MODEL.
  */
-const DEFAULT_MODELS: Record<AiTask, string> = {
+export const DEFAULT_MODELS: Record<AiTask, string> = {
   classifyFile: "gemma4:12b-it-qat",
   // the same model as classification, so naming and sorting never swap models on the GPU
   nameCategories: "gemma4:12b-it-qat",
@@ -74,12 +74,12 @@ const GROUPING_PREFIX: Readonly<Record<string, (text: string) => string>> = {
 };
 
 /** `qwen3-embedding:0.6b`: installed, multilingual, 1,024 dimensions; `nomic-embed-text` is the fallback. */
-const DEFAULT_EMBED_MODEL = "qwen3-embedding:0.6b";
+export const DEFAULT_EMBED_MODEL = "qwen3-embedding:0.6b";
 
-/** The embedding model from the environment. Null when running on the mock. */
-export function embedModel(): EmbedModel | null {
+/** The embedding model: the owner's choice, else the environment's. Null when running on the mock. */
+export function embedModel(choices: ModelChoices = {}): EmbedModel | null {
   if (serverEnv.JUGAAD_AI_PROVIDER === "mock") return null;
-  const modelId = serverEnv.JUGAAD_EMBED_MODEL ?? DEFAULT_EMBED_MODEL;
+  const modelId = choices.embed ?? serverEnv.JUGAAD_EMBED_MODEL ?? DEFAULT_EMBED_MODEL;
   return {
     baseURL: serverEnv.JUGAAD_OLLAMA_URL,
     modelId,
@@ -106,18 +106,20 @@ export const MEASURED_VRAM_GB: Readonly<Record<string, number>> = {
   "qwen3-embedding:0.6b": 2.37,
 };
 
+/** The model id a task uses, before provider details: the owner's choice, the environment, the default. */
+export function modelIdFor(task: AiTask, choices: ModelChoices = {}): string {
+  const chosen = choices[task];
+  // JUGAAD_CLASSIFY_MODEL covers naming and images too: one chat model, so the GPU never swaps
+  return (typeof chosen === "string" ? chosen : undefined) ?? serverEnv.JUGAAD_CLASSIFY_MODEL ?? DEFAULT_MODELS[task];
+}
+
 /**
- * Resolves the model for a task from the environment. Null when running on the mock.
- * JUGAAD_CLASSIFY_MODEL overrides naming too: both are chat tasks on one model, so the GPU
- * never swaps between them.
+ * Resolves the model for a task. Null when running on the mock — and for images when the owner
+ * chose not to have them looked at (`describeImage: null`).
  */
-export function modelFor(task: AiTask): TaskModel | null {
+export function modelFor(task: AiTask, choices: ModelChoices = {}): TaskModel | null {
   const provider = serverEnv.JUGAAD_AI_PROVIDER;
   if (provider === "mock") return null;
-  return {
-    provider,
-    baseURL: serverEnv.JUGAAD_OLLAMA_URL,
-    modelId: serverEnv.JUGAAD_CLASSIFY_MODEL ?? DEFAULT_MODELS[task],
-    ...CAPS[task],
-  };
+  if (task === "describeImage" && choices.describeImage === null) return null;
+  return { provider, baseURL: serverEnv.JUGAAD_OLLAMA_URL, modelId: modelIdFor(task, choices), ...CAPS[task] };
 }

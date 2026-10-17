@@ -538,3 +538,29 @@ surer what it is (the audit offered `Commercial_Kitchen_Photo.jpg` for an unknow
 - **Images go to the model as a `file` part** (AI SDK 7 deprecates the `image` part;
   `AISDK_DEP_IMAGE_CONTENT_PART`). Checked live: the 12B still captions; a vision check joins
   `src/lib/ai/live.test.ts`.
+
+## 2026-10-17 — Settings page, VRAM panel, subfolder warnings, put back
+
+The owner's asks after their first real run: free up VRAM, change models, and the warning the
+categories screen lacked. Locked through mockups (`docs/design/settings.html`, round 1: V1
+drop-down, M1 rows; `docs/design/history-put-back.html`).
+
+- **Model per job** (owner: per job, not main + grouping): sorting files, naming groups, looking
+  at images, grouping. Stored in a new `settings` table (migration 13); the choice wins over
+  `.env.local`, which wins over `DEFAULT_MODELS`. Only jobs that differ from the default are
+  stored. Each job reads the choices when it starts, so a change needs no restart. Choices are
+  checked against Ollama's installed models and their capabilities (`/api/show`) on save.
+  Images can be turned off. A change says what it redoes (answers and vectors are per model).
+- **Free VRAM unloads Jugaad's models only** (owner's choice). Which models are Jugaad's is
+  recorded in `jugaad_models` whenever the model manager loads one — the worker loads, the app
+  frees, so the record lives in the store, not in a process. Refused while a model job runs.
+- **Subfolder warnings** (owner picked both places): under the "Include subfolders" tick, and
+  on the categories list per unticked folder of the owner's, with a total above Approve.
+- **Why it mattered:** the owner's first real run (Downloads, subfolders on) moved 288 files out
+  of 7 of their own folders that were unticked — a property photo set, a font folder, a project.
+  Nothing lost. **"Put back"** on History undoes only the moves that left an owner's folder; the
+  plan stays applied (`undoing → applied`, a new lifecycle step) and the folders it made stay.
+- **Bug: hidden folders were sorted.** 8 files left `.remember`. Any path with a part starting
+  with "." is now never in scope (`isHidden`).
+- Also: the worker loads `.env.local` itself (it ran on the mock model under `npm run app`
+  while the app used Ollama); `ActionResult` moved to `src/lib/action-result.ts` (second user).

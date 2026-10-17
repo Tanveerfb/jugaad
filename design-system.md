@@ -90,7 +90,13 @@ Materialise 680ms.
 **Kit shapes:** `shape-key` (console key: a hexagon stretched, `--tip` 12px; 10px small,
 14px large), `shape-cut` (two cut corners, `--chamfer-sm` 7px), `shape-notched` /
 `shape-chamfered` (panels), `shape-hex` (tiles, icon keys, checkboxes), `shape-bay` (destination
-bays: two cut top corners and a small top notch).
+bays: two cut top corners and a small top notch), `shape-pop` (drop-downs: a pointer near the
+top right, `--pointer` 60px from the edge; chamfered lower corners).
+
+**Memory that isn't Jugaad's** is hatched (`bg-hatched`, muted diagonal stripes) on VRAM bars,
+so it reads apart from Jugaad's lit share without colour. **Warnings** sit beside the control
+they're about (`WarnNote`): a lit left bar in the attention colour, an exclamation mark, a bold
+lead saying what happens.
 
 ## Component kit
 

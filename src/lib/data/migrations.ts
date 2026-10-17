@@ -207,6 +207,17 @@ const MIGRATIONS: readonly string[] = [
 
   // 12 — a move can carry a whole project folder (phase 1)
   `ALTER TABLE plan_moves ADD COLUMN is_folder INTEGER NOT NULL DEFAULT 0;`,
+
+  // 13 — the owner's settings (model per job) and the models Jugaad has loaded (settings page)
+  `CREATE TABLE settings (
+     key TEXT PRIMARY KEY,
+     value TEXT NOT NULL,
+     updated_at TEXT NOT NULL
+   );
+   CREATE TABLE jugaad_models (
+     name TEXT PRIMARY KEY,
+     loaded_at TEXT NOT NULL
+   );`,
 ];
 
 /** Brings the database up to the latest schema version, one transaction per version. */

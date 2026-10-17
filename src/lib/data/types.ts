@@ -6,6 +6,7 @@ import type { DuplicateGroup, IndexSummary, IndexedFile, ScannedFile } from "@/s
 import type { Job, JobStatus, NewJob, WorkerStatus } from "@/schemas/job-schema";
 import type { JournalEntry, JournalOutcome, MoveMethod, NewJournalEntry } from "@/schemas/journal-schema";
 import type { MoveStatus, NewPlanMove, Plan, PlanMove, PlanStatus } from "@/schemas/plan-schema";
+import type { ModelChoices } from "@/schemas/settings-schema";
 
 /** The job queue and the worker's heartbeat. */
 export type JobsStore = {
@@ -177,7 +178,23 @@ export type ExamplesStore = {
  * The worker and the app share it through the SQLite file — the owner's choice of channel
  * (decisions.md, 2026-10-08). Nothing outside `lib/data/` touches SQL.
  */
+/**
+ * The owner's settings, and which models Jugaad loaded into Ollama — the only ones "Free VRAM"
+ * and the model manager may unload. Kept here because the worker loads models and the app
+ * frees them: two processes, one channel.
+ */
+export type SettingsStore = {
+  /** The owner's model per job; empty when nothing was chosen (defaults apply). */
+  getModelChoices(): ModelChoices;
+  setModelChoices(choices: ModelChoices): void;
+  /** Models Jugaad loaded and hasn't released. */
+  listJugaadModels(): string[];
+  markModelLoaded(name: string): void;
+  markModelReleased(name: string): void;
+};
+
 export type WorkbenchStore = JobsStore &
+  SettingsStore &
   FoldersStore &
   FilesStore &
   CategoriesStore &

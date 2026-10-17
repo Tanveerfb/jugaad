@@ -39,11 +39,20 @@ export async function applyPlan(store: WorkbenchStore, planId: string, options: 
  * Puts every moved file back, newest move first, then removes the folders this plan created if
  * they are empty. A file changed since it was moved is left where it is, with the reason.
  */
-export async function undoPlan(store: WorkbenchStore, planId: string, options: SafetyOptions): Promise<Plan> {
+export async function undoPlan(
+  store: WorkbenchStore,
+  planId: string,
+  options: SafetyOptions,
+  /**
+   * Undo only these moves ("Put back"); the rest stay where the plan put them, the folders it
+   * made stay, and the plan remains applied — files that couldn't go back keep their error.
+   */
+  only?: (move: PlanMove) => boolean,
+): Promise<Plan> {
   const { plan, folder } = startRun(store, planId, ["applied", "incomplete", "undo-incomplete"], "undoing");
   const todo = store
     .listPlanMoves(plan.id)
-    .filter((m) => m.status === "moved")
+    .filter((m) => m.status === "moved" && (!only || only(m)))
     .reverse();
 
   for (const [i, move] of todo.entries()) {
@@ -52,6 +61,7 @@ export async function undoPlan(store: WorkbenchStore, planId: string, options: S
     options.onProgress?.(i + 1, todo.length);
   }
 
+  if (only) return store.transitionPlan(plan.id, "applied");
   const stillMoved = store.listPlanMoves(plan.id).some((m) => m.status === "moved");
   if (!stillMoved) await removeCreatedFolders(store, plan, folder, options);
   return store.transitionPlan(plan.id, stillMoved ? "undo-incomplete" : "undone");

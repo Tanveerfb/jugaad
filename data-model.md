@@ -77,6 +77,9 @@ draft ⇄ approved ──▶ applying ──▶ applied ──────┐
 discarded                                       │       └──────── (retry) ┘
 ```
 
+**Partial undo ("Put back"):** `undoing → applied` — only the moves that took files out of the
+owner's own folders are undone; the rest stay moved and the plan stays applied.
+
 **Move lifecycle:** `pending → moved → undone`. A failed attempt leaves the status and sets
 `error`; the next apply (or undo) retries it.
 
@@ -172,3 +175,11 @@ are shown up to 6 such examples (`nearestExamples`).
 `plan_moves.is_folder` marks a move that carries a whole **project folder** (a folder holding a
 marker such as `package.json` or a `.blend` file — `src/lib/domain/projects.ts`). It moves by one
 same-drive rename, journalled like a file, undone as one; it never gets a rename suggestion.
+
+## Settings — `settings`, `jugaad_models` (schema version 13)
+
+`settings` is key → JSON value. `model-choices` holds the owner's model per job
+(`src/schemas/settings-schema.ts`): only jobs that differ from the default; `describeImage: null`
+means images are not looked at. `jugaad_models` lists the models Jugaad loaded into Ollama and
+hasn't released — the model manager writes it, "Free VRAM" reads it, and nothing else in Ollama
+is ever unloaded.

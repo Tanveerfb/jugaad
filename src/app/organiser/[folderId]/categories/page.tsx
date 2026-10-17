@@ -58,7 +58,13 @@ async function Categories({ params }: Pick<PageProps<"/organiser/[folderId]/cate
                 own, then approve the list.
               </p>
               {/* a fresh list from "suggest again" replaces the editor's state */}
-              <CategoryEditor key={categories.map((c) => c.id).join()} folderId={folderId} categories={categories} busy={!!activeJob} />
+              <CategoryEditor
+                key={categories.map((c) => c.id).join()}
+                folderId={folderId}
+                categories={categories}
+                includeSubfolders={view.folder.includeSubfolders}
+                busy={!!activeJob}
+              />
             </>
           )
         )}

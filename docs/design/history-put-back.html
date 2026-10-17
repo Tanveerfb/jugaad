@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>History put-back, locked 2026-10-17</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Organiser UI, mockup round 2 (project-rules §OWNER). Tokens and kit = the locked motif and
+   component round (design-system.md, docs/design/components.html). Static, data is invented. */
+:root{
+  --bg:#061428;--surface:#0c2140;--surface-2:#11294f;--border:#2a5287;--rib:#2a5a92;
+  --text:#e6edf6;--muted:#9db0c7;--accent:#ff8a2b;--ink:#1c0b00;--attn:#ff8a2b;--aqua:#52d6e6;
+  --danger:#ff6b6b;--focus:#ffb067;--ember:#b33f0f;--ember-hi:#c94a14;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --f-display:"Space Grotesk",system-ui,sans-serif;--f-body:"IBM Plex Sans",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  --hex:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg:#efe2d2;--surface:#fdf6ee;--surface-2:#f1dfca;--border:#b97a50;--rib:#c08055;
+  --text:#0e2a47;--muted:#4f6075;--accent:#e2691b;--attn:#a8420e;--aqua:#0f7f8c;--danger:#b42318;--focus:#b4470f;--ember-hi:#c24614;
+  color-scheme:light;
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font:15px/1.5 var(--f-body);color:var(--text);background:var(--bg);min-height:100vh}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- mockup frame (not part of the design) ---------- */
+.mock-bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding:14px 28px;
+  border-bottom:1px dashed color-mix(in srgb,var(--muted) 50%,transparent);font-size:13px;color:var(--muted)}
+.mock-bar b{color:var(--text);font-family:var(--f-display);font-size:15px}
+.note{max-width:1240px;margin:14px auto 0;padding:0 28px;font-size:13.5px;color:var(--muted)}
+.note div{border-left:3px solid var(--aqua);padding:8px 12px;background:color-mix(in srgb,var(--aqua) 7%,transparent)}
+.note b{color:var(--text)}
+.opt-label{font:600 12px var(--f-mono);color:var(--accent);letter-spacing:.04em;margin:0 0 8px;display:block}
+
+/* ---------- app chrome ---------- */
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;padding:12px 28px;background:color-mix(in srgb,var(--bg) 90%,transparent);border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent);backdrop-filter:blur(6px)}
+.wordmark{display:flex;align-items:center;gap:10px;font:700 20px var(--f-display);letter-spacing:.01em}
+.wordmark i{width:22px;height:19px;background:var(--accent);clip-path:var(--hex)}
+.grow{flex:1}
+.vram{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.vram .track,.vram .fill{display:block}
+.vram .track{width:120px;height:8px;border-radius:4px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border);overflow:hidden}
+.vram .fill{height:100%;width:66%;background:linear-gradient(90deg,var(--aqua),var(--accent))}
+.ikey{width:38px;height:34px;display:grid;place-items:center;border:0;cursor:pointer;background:var(--surface-2);color:var(--text);clip-path:var(--hex)}
+.ikey svg{width:16px;height:16px}
+.ikey:hover{filter:brightness(1.2)} .ikey:focus-visible{outline:none;background:var(--focus);color:var(--ink)}
+.ikey.sm{width:30px;height:26px} .ikey.sm svg{width:13px;height:13px}
+
+.screens{max-width:1240px;margin:22px auto 0;padding:0 28px}
+.trt{position:relative;display:flex;gap:2px;padding-bottom:12px;overflow-x:auto;scrollbar-width:none}
+.trt::before{content:"";position:absolute;left:0;right:0;bottom:4px;height:2px;background:repeating-linear-gradient(90deg,var(--border) 0 6px,transparent 6px 9px)}
+.trt button{flex:none;border:0;background:none;cursor:pointer;padding:8px 13px;font-weight:600;font-size:14px;color:var(--muted)}
+.trt button span{font-family:var(--f-mono);font-size:11px;margin-right:6px;color:var(--accent)}
+.trt button:hover,.trt button[aria-selected=true]{color:var(--text)}
+.trt button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.trt .bead{position:absolute;bottom:0;left:0;height:10px;width:28px;border-radius:5px;background:var(--accent);box-shadow:0 0 12px var(--accent);transition:transform .35s var(--ease)}
+
+main{max-width:1240px;margin:18px auto 0;padding:0 28px 140px}
+.screen{display:none} .screen.on{display:block}
+@keyframes mat{0%{opacity:0}30%{opacity:.6}45%{opacity:.35}70%{opacity:.9}100%{opacity:1}}
+
+/* notched panel: chamfers + a notch at the top centre */
+.panel{background:var(--border);padding:1px;clip-path:polygon(18px 0,calc(50% - 44px) 0,calc(50% - 34px) 8px,calc(50% + 34px) 8px,calc(50% + 44px) 0,calc(100% - 18px) 0,100% 18px,100% calc(100% - 18px),calc(100% - 18px) 100%,18px 100%,0 calc(100% - 18px),0 18px)}
+.panel>.in{background:var(--surface);clip-path:inherit;padding:22px}
+.mhead{display:flex;align-items:center;gap:14px;margin-bottom:18px}
+.mhead h1{font-size:30px;font-weight:600;letter-spacing:-.01em}
+.roundel{width:30px;height:26px;position:relative;background:var(--surface-2);clip-path:var(--hex);display:grid;place-items:center}
+.roundel::after{content:"";width:13px;height:13px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+/* console key buttons (A1 Ember) */
+.bk{--h:40px;position:relative;display:inline-flex;align-items:center;justify-content:center;gap:10px;height:var(--h);padding:0 22px 0 16px;border:0;cursor:pointer;white-space:nowrap;
+  font-weight:600;font-size:14px;background:var(--surface-2);color:var(--text);
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%,0 50%);transition:filter .16s,transform .16s var(--ease),background .16s}
+.bk::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.bk:hover{filter:brightness(1.14)} .bk:hover::before{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.bk:active{transform:scale(.97)}
+.bk:focus-visible{outline:none;box-shadow:inset 0 -3px 0 var(--focus)}
+.bk.pri{background:var(--ember);color:#fff} .bk.pri::before{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.bk.pri:hover{background:var(--ember-hi);filter:none}
+.bk.ghost{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+.bk.sm{--h:32px;font-size:13px;padding:0 16px 0 12px}
+.bk.loading{pointer-events:none} .bk.loading::before{animation:blink .7s steps(2) infinite}
+.bk.loading::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:30%;background:var(--accent);animation:sweep 1.1s var(--ease) infinite}
+@keyframes blink{50%{opacity:.2}} @keyframes sweep{from{left:-30%}to{left:100%}}
+.bk:disabled{opacity:.45;cursor:not-allowed} .bk:disabled::before{background:transparent;border:1.5px dashed var(--muted)}
+
+/* chase-frame input (I1) */
+.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.cf{position:relative;width:100%}
+.cf .wrap{position:relative;padding:0 14px;background:var(--bg);display:flex;align-items:center;gap:8px}
+.cf svg.frame{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.cf .base{fill:none;stroke:var(--border);stroke-width:1.5}
+.cf .run{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:0 100;transition:stroke-dasharray .55s var(--ease)}
+.cf:focus-within .run,.cf.is-focus .run{stroke-dasharray:100 0}
+.cf.is-error .base,.cf.is-error .run{stroke:var(--danger)} .cf.is-error .run{stroke-dasharray:100 0}
+.cf input{flex:1;min-width:0;height:42px;border:0;background:transparent;outline:none;font-family:var(--f-mono);font-size:14px}
+.cf input::placeholder{color:color-mix(in srgb,var(--muted) 70%,transparent)}
+.err{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--danger);margin-top:6px}
+.err svg{width:15px;height:15px;flex:none}
+
+/* hex selection controls (S1) */
+input.hx{appearance:none;flex:none;width:20px;height:18px;margin:0;background:var(--border);display:grid;place-items:center;cursor:pointer;clip-path:var(--hex)}
+input.hx::before{content:"";width:14px;height:12px;background:var(--bg);clip-path:var(--hex);transition:all .18s var(--ease)}
+input.hx:checked::before{background:var(--accent);width:20px;height:18px}
+input.hx:indeterminate::before{background:linear-gradient(var(--bg),var(--bg)) center/8px 2px no-repeat,var(--accent);width:20px;height:18px}
+input.hx:focus-visible{background:var(--focus)}
+input.hx.sm{width:16px;height:14px} input.hx.sm::before{width:11px;height:9px} input.hx.sm:checked::before{width:16px;height:14px}
+.check{display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:14px}
+
+/* status: a light and a word, never colour alone */
+.status{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+.status i{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.status.working{color:var(--aqua)} .status.working i{background:var(--aqua);box-shadow:0 0 8px var(--aqua);animation:blink 1.2s ease-in-out infinite}
+.status.attn{color:var(--attn)} .status.attn i{background:var(--attn);box-shadow:0 0 8px var(--attn)}
+.status.done{color:var(--text)} .status.done i{background:var(--text)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--surface-2);clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%)}
+.tag.attn{background:color-mix(in srgb,var(--attn) 16%,transparent);color:var(--attn)}
+.tag.work{background:color-mix(in srgb,var(--aqua) 14%,transparent);color:var(--aqua)}
+
+/* the rotor, small: 18 segments, a leading head that pulses */
+.rotor{position:relative;flex:none;width:58px;height:58px}
+.rotor svg{width:100%;height:100%} .rotor .seg{stroke:var(--surface-2);stroke-width:5}
+.rotor .seg.on{stroke:var(--aqua)} .rotor .seg.head{stroke:var(--accent);animation:blink 1s ease-in-out infinite}
+.rotor .marks{transform-origin:50% 50%;animation:spinr 30s linear infinite;fill:none;stroke:var(--border);stroke-width:1;stroke-dasharray:2 5}
+@keyframes spinr{to{transform:rotate(360deg)}}
+
+/* empty state (E2): honeycomb with one cell missing */
+.empty{display:grid;justify-items:center;text-align:center;gap:10px;padding:28px 12px}
+.comb3{position:relative;width:100px;height:88px}
+.comb3 span{position:absolute;width:40px;height:35px;background:var(--surface-2);clip-path:var(--hex)}
+.comb3 svg{position:absolute;width:40px;height:35px;overflow:visible}
+.comb3 svg path{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:4 3}
+.empty h2{font-size:21px} .empty p{margin:0;color:var(--muted);max-width:52ch}
+
+/* numbers row */
+.facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0;padding:0;list-style:none}
+.facts li{display:grid;gap:0}
+.facts b{font:500 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.facts span{font-size:12.5px;color:var(--muted)}
+
+/* step track for a folder: scan → categories → plan → applied */
+.steps{display:flex;align-items:center;gap:0;list-style:none;margin:0;padding:0;flex-wrap:wrap;row-gap:8px}
+.steps li{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.steps li::before{content:"";width:16px;height:14px;background:var(--surface-2);clip-path:var(--hex);box-shadow:inset 0 0 0 1px var(--border)}
+.steps li+li::after{content:none}
+.steps li:not(:last-child){margin-right:8px}
+.steps li:not(:last-child) .dash{width:34px;height:2px;margin-left:8px;background:repeating-linear-gradient(90deg,var(--border) 0 4px,transparent 4px 7px)}
+.steps li.done{color:var(--text)} .steps li.done::before{background:var(--text)}
+.steps li.now{color:var(--accent)} .steps li.now::before{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+
+/* ===== Folders, layout A: rail + stage ===== */
+.layA{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
+.rail{display:grid;gap:8px}
+.frow{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:11px 12px;background:var(--bg);cursor:pointer;border:0;text-align:left;
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.frow .node{grid-row:span 2;width:22px;height:19px;background:var(--surface-2);clip-path:var(--hex)}
+.frow .p{font-family:var(--f-mono);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow[aria-current=true]{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--accent)}
+.frow[aria-current=true] .node{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+.frow:hover{background:color-mix(in srgb,var(--surface-2) 70%,var(--bg))}
+.frow:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.stage{display:grid;gap:18px;padding:18px;background:var(--bg);clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.stage h2{font-size:22px} .stage .p{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.job{display:flex;align-items:center;gap:14px;min-width:0;padding:12px 14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--border)}
+.job b{display:block} .job span{font-size:13px;color:var(--muted)}
+.next{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+
+/* ===== Folders, layout B: stacked folder panels ===== */
+.stack{display:grid;gap:12px}
+.fpanel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 20px;align-items:center;padding:16px 18px;background:var(--bg);
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.fpanel.lit{box-shadow:inset 3px 0 0 var(--accent)}
+.fpanel .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+.fpanel .top .p{font:500 15px var(--f-mono)}
+.fpanel .row2{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;justify-content:space-between}
+
+/* ===== Categories C1: rows ===== */
+.cats{display:grid;gap:6px}
+.crow{display:grid;grid-template-columns:22px minmax(140px,220px) 64px minmax(0,1fr);gap:14px;align-items:center;padding:9px 12px;background:var(--bg)}
+.crow .cname{display:flex;align-items:center;gap:8px;min-width:0}
+.crow .cname input{width:100%;min-width:0;height:32px;padding:0 8px;border:0;background:transparent;font-weight:600;outline:none;box-shadow:inset 0 -1px 0 transparent;transition:box-shadow .2s}
+.crow .cname input:hover{box-shadow:inset 0 -1px 0 var(--border)} .crow .cname input:focus{box-shadow:inset 0 -2px 0 var(--accent)}
+.crow .ex{font-family:var(--f-mono);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .acts{display:flex;gap:6px}
+.crow.rejected{opacity:.55} .crow.rejected .cname input{text-decoration:line-through}
+.crow.mine .ex{font-family:var(--f-body);font-style:italic}
+.catfoot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:12px}
+.approvebar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin-top:18px;padding:12px 14px;background:var(--surface-2)}
+
+/* ===== Categories C2: comb ===== */
+/* a real flat-top honeycomb: columns 3/4 of a cell apart, odd columns half a cell down (laid out by script) */
+.comb{position:relative;min-height:280px}
+.cell{--w:150px;position:absolute;width:var(--w);height:calc(var(--w) * .866);padding:2px;border:0;cursor:pointer;background:var(--border);clip-path:var(--hex);transition:transform .2s var(--ease)}
+.cell .face{display:grid;place-content:center;justify-items:center;gap:4px;width:100%;height:100%;padding:0 24px;text-align:center;background:var(--bg);clip-path:var(--hex)}
+.cell b{font:600 14.5px var(--f-display);line-height:1.15}
+.cell span.n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.cell.on{background:color-mix(in srgb,var(--accent) 55%,var(--border))}
+.cell.on .face{background:radial-gradient(circle at 50% 55%,color-mix(in srgb,var(--accent) 20%,var(--bg)),var(--bg) 72%)}
+.cell.off{opacity:.5} .cell.off b{text-decoration:line-through}
+.cell.sel{background:var(--focus);padding:3px} .cell.sel b{color:var(--accent)}
+.cell:hover{transform:translateY(-2px)} .cell:focus-visible{outline:none;background:var(--focus)}
+.cell.add{background:color-mix(in srgb,var(--border) 45%,transparent)} .cell.add .face{background:var(--surface)}
+.cell.add b{color:var(--muted);font-size:26px;font-weight:400}
+.c2{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.detail{display:grid;gap:12px;padding:16px;background:var(--bg)}
+.detail ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+
+/* ===== Plan review: destination bays (locked B) ===== */
+.planhead{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.bays{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+.bay{background:var(--bb,var(--border));padding:1px;clip-path:polygon(14px 0,calc(50% - 30px) 0,calc(50% - 22px) 6px,calc(50% + 22px) 6px,calc(50% + 30px) 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%,0 14px)}
+.bay>div{background:var(--surface);padding:14px;display:grid;gap:10px;clip-path:inherit}
+.bay h4{font:600 16px var(--f-display);display:flex;align-items:center;gap:10px}
+.bay h4 .grow{flex:1}
+.bay .dest{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.bay ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.bay li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 9px;background:var(--bg)}
+.bay li .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
+.bay li .c{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.bay li.off{opacity:.5} .bay li.off .n{text-decoration:line-through}
+.bay li .rn{grid-column:2/-1;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);cursor:pointer;min-width:0}
+.bay li .rn span{font-family:var(--f-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bay li .rn.on span{color:var(--accent)}
+.bay li .guess{grid-column:2/-1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12.5px;color:var(--muted)}
+.bay li .guess select{height:28px;padding:0 8px;background:var(--surface-2);border:0;box-shadow:inset 0 0 0 1px var(--border);font-size:12.5px}
+.bay.review{--bb:var(--attn)} .bay.review h4{color:var(--attn)}
+.bay.dups{--bb:color-mix(in srgb,var(--muted) 60%,var(--border))}
+.bay .more{font-size:13px;color:var(--muted);padding:2px 9px}
+.applybar{position:sticky;bottom:12px;z-index:3;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;margin-top:18px;padding:12px 16px;
+  background:var(--surface-2);box-shadow:0 10px 30px color-mix(in srgb,black 35%,transparent),inset 0 0 0 1px var(--border);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
+.applybar .acts{display:flex;flex-wrap:wrap;gap:8px}
+.r2demo{display:grid;gap:5px;max-width:420px}
+.r2demo li{list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 9px;background:var(--bg)}
+.r2demo .old{text-decoration:line-through;color:var(--muted);font-size:12px;font-family:var(--f-mono);grid-column:2}
+.r2demo .new{color:var(--accent);font-family:var(--f-mono);font-size:13px}
+.aa{width:30px;height:26px;border:0;cursor:pointer;font:600 11px var(--f-mono);background:var(--surface-2);color:var(--muted);clip-path:var(--hex)}
+.aa[aria-pressed=true]{background:var(--accent);color:var(--ink)}
+
+/* ===== Applied: batch timeline (L1) + rotor ticket toast (T2) ===== */
+.tl{position:relative;padding-left:30px;display:grid;gap:16px;max-width:720px}
+.tl::before{content:"";position:absolute;left:11px;top:4px;bottom:4px;width:2px;background:repeating-linear-gradient(var(--border) 0 4px,transparent 4px 7px)}
+.tl .node{position:relative;display:grid;gap:3px}
+.tl .node::before{content:"";position:absolute;left:-27px;top:3px;width:18px;height:16px;background:var(--accent);clip-path:var(--hex)}
+.tl .node.warn::before{background:var(--attn)} .tl .node.undone::before{background:var(--border)} .tl .node.undone{color:var(--muted)}
+.tl .node b{font-weight:600} .tl .node span{color:var(--muted);font-size:13px}
+.tl .node .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.tl .node ul{margin:4px 0 0;padding:0;list-style:none;font-size:13px;display:grid;gap:3px}
+.tl .node ul li{font-family:var(--f-mono);font-size:12.5px}
+.toast{position:fixed;right:24px;bottom:24px;z-index:6;width:330px;display:flex;gap:12px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--border);box-shadow:0 10px 30px color-mix(in srgb,black 35%,transparent)}
+.toast svg{flex:none;width:34px;height:34px} .toast .ring{fill:none;stroke:var(--accent);stroke-width:4;stroke-dasharray:100 100;animation:countdown 8s linear infinite} .toast .track{fill:none;stroke:var(--surface-2);stroke-width:4}
+@keyframes countdown{to{stroke-dashoffset:100}}
+.toast p{margin:0;flex:1;font-size:13.5px}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.optbox{padding-top:6px}
+hr.dash{border:0;height:1px;margin:30px 0;background:repeating-linear-gradient(90deg,var(--border) 0 6px,transparent 6px 10px)}
+
+@media (max-width:980px){.layA,.c2,.split{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .mock-bar,.screens,main,.note{padding-left:16px;padding-right:16px}
+  .topbar{padding:10px 16px;gap:10px} .vram .track{width:64px} .vram .lbl-v{display:none}
+  .panel>.in{padding:14px} .mhead h1{font-size:25px}
+  .add,.catfoot{grid-template-columns:1fr} .add .bk,.catfoot .bk{justify-self:start}
+  .crow{grid-template-columns:22px minmax(0,1fr) auto;row-gap:2px} .crow .cnt{grid-column:3;grid-row:1} .crow .ex{grid-column:2/-1}
+  .fpanel{grid-template-columns:1fr} .bays{grid-template-columns:1fr}
+  .cell .face{padding:0 16px} .cell b{font-size:13px}
+  .toast{left:16px;right:16px;width:auto;bottom:16px}
+  .job{flex-direction:column;align-items:flex-start;gap:10px} .job .grow{display:none} .stage{min-width:0}
+  .applybar{bottom:8px;padding:10px 12px;gap:8px} .applybar .acts{width:100%;justify-content:space-between} .applybar .long{display:none} .vram .of{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<style>
+.warnbox{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;font-size:13.5px;background:color-mix(in srgb,var(--attn) 10%,transparent);box-shadow:inset 3px 0 0 var(--attn)}
+.warnbox svg{flex:none;width:16px;height:16px;margin-top:2px;color:var(--attn)} .warnbox b{color:var(--text)}
+.outof{display:grid;gap:8px;margin-top:8px;padding:12px 14px;background:var(--bg);max-width:640px}
+.outof table{border-collapse:collapse;font-size:13px;width:100%}
+.outof td{padding:4px 0;vertical-align:top} .outof td:first-child{font-family:var(--f-mono);padding-right:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+.outof td:last-child{color:var(--muted)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media (max-width:980px){.pair{grid-template-columns:1fr}}
+@media (max-width:640px){.outof td:first-child{white-space:normal;max-width:none}}
+</style>
+<div class="mock-bar">
+  <span><b>History · put back files from your folders — locked 2026-10-17</b> · your real numbers</span>
+  <span>Narrow the window for the phone layout.</span>
+</div>
+<header class="topbar">
+  <span class="wordmark"><i aria-hidden="true"></i>Jugaad</span><span class="grow"></span>
+  <button class="ikey" type="button" id="theme" aria-label="Switch to light theme"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12.5 9.5A5 5 0 0 1 6.5 3.5a5 5 0 1 0 6 6z"/></svg></button>
+</header>
+<div class="note"><div><b>When a plan moved files out of folders you already had</b>, its History entry says so and offers to put just those back. The other moves stay. Shown only for plans that did this.</div></div>
+<main>
+<div class="pair">
+<section aria-label="Before">
+  <span class="opt-label">BEFORE</span>
+  <div class="panel"><div class="in">
+    <div class="mhead"><button class="ikey" aria-label="Back to Downloads"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></button><span class="roundel" aria-hidden="true"></span><h1>Downloads · history</h1></div>
+    <ol class="tl">
+      <li class="node">
+        <b>Saturday 17 Oct, 06:41 pm — 825 of 825 files moved</b>
+        <span>Every file is where the plan put it.</span>
+        <div class="warnbox" style="margin-top:8px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 4v5M8 12h.01"/></svg>
+          <span><b>288 of them came out of 7 folders you already had.</b> Put just those back, and the other 537 stay where they are.</span></div>
+        <div class="outof">
+          <table>
+            <tr><td>1-5 Oxford St Blacktown - Photos</td><td>146 files → Group photos, _review, Screenshots</td></tr>
+            <tr><td>SimetrixDT-v02</td><td>69 → _review, PNGs, Documents…</td></tr>
+            <tr><td>Google_Sans_Flex,Quicksand</td><td>56 → _review, Documents</td></tr>
+            <tr><td>.remember</td><td>8 → _review, Documents</td></tr>
+            <tr><td>Kalam,Permanent_Marker</td><td>6 → _review, Documents</td></tr>
+            <tr><td>NCA</td><td>2 → Documents, PNGs</td></tr>
+            <tr><td>CD Projekt RED Goodies</td><td>1 → Compressed</td></tr>
+          </table>
+        </div>
+        <div class="acts"><button class="bk pri sm" type="button">Put back 288 files</button><button class="bk ghost sm" type="button">Undo all 825</button></div>
+      </li>
+    </ol>
+  </div></div>
+</section>
+<section aria-label="After">
+  <span class="opt-label">AFTER</span>
+  <div class="panel"><div class="in">
+    <div class="mhead"><button class="ikey" aria-label="Back to Downloads"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L5 8l5 5"/></svg></button><span class="roundel" aria-hidden="true"></span><h1>Downloads · history</h1></div>
+    <ol class="tl">
+      <li class="node">
+        <b>Saturday 17 Oct, 06:41 pm — 537 files moved, 288 put back</b>
+        <span>The files from your 7 folders are back where they were. Empty folders the plan made were left, as other files use them.</span>
+        <div class="acts"><button class="bk ghost sm" type="button">Undo the other 537</button></div>
+      </li>
+    </ol>
+  </div></div>
+  <p class="muted" style="font-size:13.5px">While it runs, the entry shows the usual progress: "Putting back 112 of 288 files".</p>
+</section>
+</div>
+</main>
+<script>
+document.getElementById("theme").addEventListener("click",e=>{const h=document.documentElement;const l=h.dataset.theme==="light";h.dataset.theme=l?"dark":"light";});
+</script>
+</body>
+</html>

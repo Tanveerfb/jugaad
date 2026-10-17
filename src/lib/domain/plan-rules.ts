@@ -28,10 +28,10 @@ export function isLoose(path: string): boolean {
  * included, nested files too — except those already filed in a category folder or `_review`
  * (`settled`, lower-case), which are where they belong. Suggestions and plans use the same rule,
  * so categories are suggested from the files that will be sorted. Files that belong to the
- * folder itself, or are still downloading, are never sorted (`isFolderOwned`).
+ * folder itself, are still downloading (`isFolderOwned`) or are hidden (`isHidden`) are never sorted.
  */
 export function inScope(path: string, includeSubfolders: boolean, settled: ReadonlySet<string>): boolean {
-  if (isFolderOwned(path)) return false;
+  if (isFolderOwned(path) || isHidden(path)) return false;
   if (isLoose(path)) return true;
   return includeSubfolders && !settled.has(topFolder(path)!.toLowerCase());
 }
@@ -48,6 +48,15 @@ const DOWNLOADING = /\.(crdownload|part|partial|download|opdownload)$/i;
 export function isFolderOwned(path: string): boolean {
   const name = path.slice(Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/")) + 1);
   return FOLDER_FILES.has(name.toLowerCase()) || DOWNLOADING.test(name);
+}
+
+/**
+ * A hidden file, or a file inside a hidden folder (a name starting with "."). Apps keep their
+ * own state in such folders; the owner's real run moved 8 files out of `.remember` before this
+ * rule existed (2026-10-17).
+ */
+export function isHidden(path: string): boolean {
+  return path.split(/[\\/]/).some((part) => part.startsWith("."));
 }
 
 /** The first folder of a relative path, or null for a loose file: `Invoices\2024\a.pdf` → `Invoices`. */

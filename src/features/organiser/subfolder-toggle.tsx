@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { setIncludeSubfolders } from "@/app/organiser/actions";
 import { Checkbox } from "@/components/ui/checkbox";
+import { WarnNote } from "@/components/warn-note";
 import { useServerAction } from "@/hooks/use-server-action";
 
 /**
@@ -23,12 +24,19 @@ export function SubfolderToggle({ folderId, include, busy }: { folderId: string;
         />
         Include subfolders
       </label>
-      <p className="m-0 text-[13px] text-muted-foreground">
-        {include
-          ? "Files in subfolders are sorted too, except those already in a category folder."
-          : "Only the files sitting directly in this folder are sorted."}{" "}
-        Suggest categories again after changing this.
-      </p>
+      {include ? (
+        // with subfolders included, an existing folder of the owner's is only safe if it is
+        // ticked as a category — said here, where the choice is made (settings round 1)
+        <WarnNote>
+          <b>Your subfolders&apos; files will be sorted too.</b> A folder of yours stays as it is only if you tick it as
+          a category. You&apos;ll see each one on the categories list before anything moves. Suggest categories again
+          after changing this.
+        </WarnNote>
+      ) : (
+        <p className="m-0 text-[13px] text-muted-foreground">
+          Only the files sitting directly in this folder are sorted. Suggest categories again after changing this.
+        </p>
+      )}
     </div>
   );
 }

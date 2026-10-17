@@ -21,6 +21,7 @@ const LEGAL_PLAN: [PlanStatus, PlanStatus][] = [
   ["incomplete", "undoing"],
   ["undoing", "undone"],
   ["undoing", "undo-incomplete"],
+  ["undoing", "applied"],
   ["undo-incomplete", "undoing"],
 ];
 

@@ -248,6 +248,21 @@
   clip-path: var(--shape-hex);
 }
 
+/* memory that isn't Jugaad's, on the VRAM bars: hatched, so it reads without colour */
+@utility bg-hatched {
+  background: repeating-linear-gradient(135deg, var(--muted-foreground) 0 3px, transparent 3px 6px);
+}
+
+/* a drop-down panel: a pointer near the top right towards its trigger, chamfered lower corners
+   (settings round 1, locked 2026-10-17). --pointer is the pointer's distance from the right edge. */
+@utility shape-pop {
+  clip-path: polygon(
+    0 10px, calc(100% - var(--pointer, 60px) - 10px) 10px, calc(100% - var(--pointer, 60px)) 0,
+    calc(100% - var(--pointer, 60px) + 10px) 10px, 100% 10px, 100% calc(100% - 12px),
+    calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px)
+  );
+}
+
 /*
  * Bigger on the inside: a module's hexagon morphs into its notched panel. React's
  * <ViewTransition share="module-morph"> puts the pair in the `module-morph` class. Both shapes

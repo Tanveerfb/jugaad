@@ -29,9 +29,11 @@ while a job runs (`src/components/live-refresh.tsx`). `npm run app` starts both.
 | `src/lib/ai/` | `WorkbenchAi` (`types.ts`): `classifyFile`, `embedTexts`, `nameCategories`, `describeImage`. `ai-sdk.ts` (AI SDK 7 → Ollama), `ollama-embedder.ts` (`/api/embed`), `mock.ts`, `model-manager.ts` (`prepareModel`, VRAM budget), `models.ts`, `prompts/` | schemas, domain | organiser, worker |
 | `src/lib/organiser/` | The Organiser's steps: `suggest-categories` (captions → embeddings → clusters → one naming call), `describe-images`, `build-plan` (classify against approved categories, cached), `edit-plan` (rename ticks, "Send to…" + filing examples), `organiser-view` (what pages show) | data, domain, ai, files | worker handlers, pages, actions |
 | `src/worker/` | `run-worker` (claim loop, heartbeat, cancel polling, reconcile on start), `job-handlers` (`organiser/scan-folder`, `suggest-categories`, `build-plan`, `apply-plan`, `undo-plan`) | everything in `src/lib/` | — |
-| `src/app/` | Routes: `/` workbench, `/organiser`, `/organiser/[folderId]/{categories,plan,history}`; `organiser/actions.ts` — every Organiser Server Action | lib, features, components | — |
+| `src/app/` | Routes: `/` workbench, `/organiser`, `/organiser/[folderId]/{categories,plan,history}`, `/settings`; `organiser/actions.ts` and `settings/actions.ts` — every Server Action | lib, features, components | — |
+| `src/lib/settings-view.ts` | What `/settings` and the VRAM panel show: Ollama's state, installed models and capabilities, the model per job, Jugaad's loaded models | ai, data, domain (`model-jobs`) | settings page, top bar |
 | `src/features/organiser/` | The Organiser's screens (folder rail, stage, step track, category editor, destination bays, history…) | components, lib (views only) | organiser routes |
 | `src/features/workbench/` | Module comb, hex tiles, job panel | components | `/` |
+| `src/features/settings/` | The model-per-job form | components, lib (views only) | `/settings` |
 | `src/components/` | Shared: motif primitives (`motif/`), the kit (`ui/`), top bar, module view, live refresh | — | features, routes |
 | `scripts/run-app.mjs` | `npm run app`: builds if needed, starts app and worker together | — | the owner |
 
@@ -47,13 +49,21 @@ plan" queues `build-plan` → one classification per file (cached in `file_class
 `undoPlan` reverses it from the journal.
 
 **A job that needs a model** calls `prepareModel` first; the model manager unloads only
-Jugaad's own models to fit the VRAM budget.
+Jugaad's own models to fit the VRAM budget, and notes each model it loads in the store
+(`jugaad_models`) — so the app's "Free VRAM" can unload what the worker loaded. Each job reads
+the owner's model choices (`/settings`, the `settings` table) when it starts.
+
+**Put back.** History's "Put back" queues `organiser/put-back`: `undoPlan` with a filter
+(`leftOwnFolder`) undoes only the moves that took files out of the owner's own folders; the plan
+stays applied.
 
 ## Where do I find…
 
 - **…what a page shows?** `src/lib/organiser/organiser-view.ts` and `src/lib/workbench-view.ts`.
 - **…which files get sorted?** `inScope` in `src/lib/domain/plan-rules.ts` (suggestions and plans
-  share it).
+  share it; hidden, folder-metadata and in-progress files never are).
+- **…which model a job uses?** `modelIdFor` / `modelFor` in `src/lib/ai/models.ts`: the owner's
+  choice, then `.env.local`, then `DEFAULT_MODELS`.
 - **…what the model is sent?** `src/lib/ai/prompts/`, and `environment.md` (data sent to Ollama).
 - **…why a choice was made?** `decisions.md`, newest at the bottom.
 - **…the audit numbers on the owner's folders?** `docs/STATUS.md`, Verified.

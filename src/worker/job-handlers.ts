@@ -5,6 +5,7 @@ import { embedModel, modelFor } from "@/lib/ai/models";
 import { scanFolder } from "@/lib/files/scan-folder";
 import { buildPlan } from "@/lib/organiser/build-plan";
 import { suggestCategories } from "@/lib/organiser/suggest-categories";
+import { leftOwnFolder } from "@/lib/domain/put-back";
 import { applyPlan, undoPlan } from "@/lib/safety/apply-plan";
 import { machineProtectedPaths } from "@/lib/safety/protected-paths";
 import { suggestCategoriesPayloadSchema } from "@/schemas/category-schema";
@@ -49,12 +50,14 @@ export const JOB_HANDLERS: Readonly<Record<string, JobHandler>> = {
   },
   "organiser/suggest-categories": async ({ job, store, ai, signal }) => {
     const { folderId } = suggestCategoriesPayloadSchema.parse(job.payload);
+    const choices = store.getModelChoices();
     await suggestCategories(store, ai, folderId, {
       // on the mock the ids only key the embedding cache
-      embedModel: embedModel()?.modelId ?? "mock",
-      nameModel: modelFor("nameCategories")?.modelId ?? "mock",
-      describeModel: modelFor("describeImage")?.modelId ?? "mock",
-      prepareModel,
+      embedModel: embedModel(choices)?.modelId ?? "mock",
+      nameModel: modelFor("nameCategories", choices)?.modelId ?? "mock",
+      // the owner can turn looking at images off on the settings page
+      describeModel: choices.describeImage === null ? undefined : (modelFor("describeImage", choices)?.modelId ?? "mock"),
+      prepareModel: (model) => prepareModel(model, store),
       signal,
       onProgress: (progress, detail) => store.reportProgress(job.id, progress, detail),
     });
@@ -62,14 +65,16 @@ export const JOB_HANDLERS: Readonly<Record<string, JobHandler>> = {
   "organiser/build-plan": async ({ job, store, ai, signal }) => {
     const { folderId } = buildPlanPayloadSchema.parse(job.payload);
     await buildPlan(store, ai, folderId, {
-      classifyModel: modelFor("classifyFile")?.modelId ?? "mock",
-      prepareModel,
+      classifyModel: modelFor("classifyFile", store.getModelChoices())?.modelId ?? "mock",
+      prepareModel: (model) => prepareModel(model, store),
       signal,
       onProgress: (progress, detail) => store.reportProgress(job.id, progress, detail),
     });
   },
   "organiser/apply-plan": planRunner(applyPlan),
   "organiser/undo-plan": planRunner(undoPlan),
+  // undo only the files that left the owner's own folders; the loose files stay sorted
+  "organiser/put-back": planRunner((store, planId, options) => undoPlan(store, planId, options, leftOwnFolder)),
 };
 
 export function handlerFor(job: Job): JobHandler | undefined {

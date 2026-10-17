@@ -195,6 +195,25 @@ describe("undoing a plan", () => {
     expect(store.listPlanMoves(plan.id)[0]).toMatchObject({ status: "moved", error: /changed after it was moved/ });
   });
 
+  it("puts back only the chosen files; the rest stay and the plan stays applied", async () => {
+    put("Oxford St\\1.jpg", "house");
+    put("loose.pdf", "bill");
+    const plan = await approvedPlan([move("Oxford St\\1.jpg", "Group photos\\1.jpg"), move("loose.pdf", "Bills\\loose.pdf")]);
+    await applyPlan(store, plan.id, opts());
+
+    const after = await undoPlan(store, plan.id, opts(), (m) => m.fromPath.startsWith("Oxford St"));
+    expect(after.status).toBe("applied");
+    expect(readFileSync(join(folder, "Oxford St", "1.jpg"), "utf8")).toBe("house");
+    expect(readFileSync(join(folder, "Bills", "loose.pdf"), "utf8")).toBe("bill");
+    expect(store.listPlanMoves(plan.id).map((m) => m.status)).toEqual(["undone", "moved"]);
+    // the folder it made stays: put-back never removes folders
+    expect(existsSync(join(folder, "Group photos"))).toBe(true);
+
+    // and the rest can still be undone later
+    expect((await undoPlan(store, plan.id, opts())).status).toBe("undone");
+    expect(existsSync(join(folder, "loose.pdf"))).toBe(true);
+  });
+
   it("can't undo a plan that was never applied", async () => {
     const plan = await approvedPlan([]);
     await expect(undoPlan(store, plan.id, opts())).rejects.toThrow(/can't be undone/);

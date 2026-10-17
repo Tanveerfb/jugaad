@@ -1,4 +1,5 @@
 import "server-only";
+import { putBackGroups, type PutBackGroup } from "@/lib/domain/put-back";
 import { getStore } from "@/lib/data";
 import { folderStatus, jobFolderId, type FolderStatus } from "@/lib/domain/folder-status";
 import { groupIntoBays, planCounts, type Bay } from "@/lib/domain/plan-bays";
@@ -102,7 +103,16 @@ export function getPlanSetup(folderId: string): { files: number; includeSubfolde
   return { files: files.length, includeSubfolders, categoryCount: approved.length };
 }
 
-export type HistoryEntry ={ plan: Plan; moved: number; total: number; failed: PlanMove[] };
+export type HistoryEntry = {
+  plan: Plan;
+  moved: number;
+  total: number;
+  /** Files put back with "Put back" (or a full undo), counted for the entry's title. */
+  putBack: number;
+  failed: PlanMove[];
+  /** The owner's folders this plan took files out of and hasn't put back (History, "Put back"). */
+  outOfOwn: PutBackGroup[];
+};
 
 /** Plans that changed the disk, newest first, with what failed. */
 export function getHistory(folderId: string): HistoryEntry[] {
@@ -116,7 +126,9 @@ export function getHistory(folderId: string): HistoryEntry[] {
         plan,
         moved: moves.filter((m) => m.status === "moved").length,
         total: moves.length,
+        putBack: moves.filter((m) => m.status === "undone").length,
         failed: moves.filter((m) => m.error !== null),
+        outOfOwn: plan.status === "applied" ? putBackGroups(moves) : [],
       };
     });
 }

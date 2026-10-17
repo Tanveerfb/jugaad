@@ -79,3 +79,22 @@ export async function embed(
   if (embeddings.length !== request.input.length) throw new Error("Ollama returned the wrong number of embeddings");
   return embeddings;
 }
+
+const showSchema = z.object({ capabilities: z.array(z.string()).default([]) });
+const versionSchema = z.object({ version: z.string() });
+
+/** What a model can do, as Ollama reports it: "completion", "vision", "embedding", "tools"… */
+export async function modelCapabilities(baseURL: string, name: string, signal?: AbortSignal): Promise<string[]> {
+  const { capabilities } = await call(baseURL, "/api/show", showSchema, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model: name }),
+    signal,
+  });
+  return capabilities;
+}
+
+/** The running Ollama's version — also the cheapest way to tell it is answering. */
+export async function ollamaVersion(baseURL: string, signal?: AbortSignal): Promise<string> {
+  return (await call(baseURL, "/api/version", versionSchema, { signal })).version;
+}

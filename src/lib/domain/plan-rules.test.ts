@@ -7,6 +7,10 @@ describe("files that stay put", () => {
     (path) => expect(inScope(path, true, new Set())).toBe(false),
   );
 
+  it.each([".remember\\notes.json", "Projects\\.cache\\a.bin", ".env"])("never sorts hidden %s", (path) =>
+    expect(inScope(path, true, new Set())).toBe(false),
+  );
+
   it("still sorts ordinary files with similar names", () => {
     expect(inScope("desktop.ini.txt", false, new Set())).toBe(true);
     expect(inScope("part 2.pdf", false, new Set())).toBe(true);

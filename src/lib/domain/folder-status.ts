@@ -27,6 +27,7 @@ const JOB_WORDS: Record<string, string> = {
   "build-plan": "Sorting",
   "apply-plan": "Moving files",
   "undo-plan": "Undoing",
+  "put-back": "Putting back",
 };
 
 export function jobWord(job: Pick<Job, "kind">): string {

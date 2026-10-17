@@ -25,8 +25,9 @@ Test-only (not read by the app): `JUGAAD_LIVE_AI=1`, `JUGAAD_LIVE_MODEL` and
 the app's slider overrides `OLLAMA_CONTEXT_LENGTH`; "Expose Ollama to the network" off, so it
 listens on `127.0.0.1` only.
 
-Phase 1 moves the provider and model choice into in-app settings (spec); these variables
-then become the defaults.
+The model per job is chosen on the settings page (`/settings`, stored in the database); these
+variables are the defaults it falls back to. `.env.local` is read by the app (Next.js) and by
+the worker (`src/worker/load-env-file.ts`).
 
 **Local tools Jugaad calls** (no accounts; each one missing just means less is known about a
 file): `powershell.exe` lists OneDrive online-only files in the folders a scan walked

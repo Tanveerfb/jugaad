@@ -6,7 +6,8 @@ import { handlerFor, type JobHandler } from "./job-handlers";
 
 export type WorkerOptions = {
   store: WorkbenchStore;
-  ai: WorkbenchAi;
+  /** The model adapter, or a function giving the one to use for each job (the owner's current choices). */
+  ai: WorkbenchAi | (() => WorkbenchAi);
   /** How often to look for a queued job when idle. */
   pollMs?: number;
   /** How often to write the heartbeat the app reads. */
@@ -38,7 +39,8 @@ export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, cancelPol
   const beat = () => store.recordWorkerBeat({ pid: process.pid, startedAt });
   beat();
   const beatTimer = setInterval(beat, beatMs);
-  log("worker.started", { pid: process.pid, provider: ai.provider });
+  const aiForJob = typeof ai === "function" ? ai : () => ai;
+  log("worker.started", { pid: process.pid, provider: aiForJob().provider });
 
   const loop = (async () => {
     // before any job resumes: settle disk changes a crash left half-recorded
@@ -63,7 +65,7 @@ export function startWorker({ store, ai, pollMs = 1000, beatMs = 2000, cancelPol
         if (store.getJob(job.id)?.status === "cancelled") cancelled.abort();
       }, cancelPollMs);
       try {
-        await handler({ job, store, ai, signal: AbortSignal.any([stopping.signal, cancelled.signal]) });
+        await handler({ job, store, ai: aiForJob(), signal: AbortSignal.any([stopping.signal, cancelled.signal]) });
         if (stopping.signal.aborted) {
           // shutting down mid-job: leave it running; the next start requeues it
           break;

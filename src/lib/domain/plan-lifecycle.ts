@@ -9,6 +9,9 @@ import type { MoveStatus, PlanStatus } from "@/schemas/plan-schema";
  *     ▼                     └──────── (retry) ┘     │       ▲  └────▶ undo-incomplete
  *   discarded                                       │       └──────── (retry) ┘
  *
+ * `undoing ──▶ applied` ends a partial undo ("Put back"): some files went back, the rest stay
+ * moved, so the plan is still applied (2026-10-17).
+ *
  * `applying` and `undoing` are the only states the worker holds; a crash leaves them, and the
  * next start settles them to `incomplete` / `undo-incomplete` after checking the disk.
  */
@@ -19,7 +22,7 @@ const PLAN_TRANSITIONS: Record<PlanStatus, readonly PlanStatus[]> = {
   applying: ["applied", "incomplete"],
   applied: ["undoing"],
   incomplete: ["applying", "undoing"],
-  undoing: ["undone", "undo-incomplete"],
+  undoing: ["undone", "undo-incomplete", "applied"],
   undone: [],
   "undo-incomplete": ["undoing"],
 };

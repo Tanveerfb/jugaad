@@ -28,6 +28,7 @@ positioning — is Radix's; everything visible is the motif's.
 | `Tooltip` | Cut-corner popover, no arrow | From the interim kit |
 | `Table` | Plain zone — motif spacing and colours only | Plans use destination bays instead |
 | `Label` | Unchanged | |
+| `Popover` | Notched drop-down, pointer near its top right (`shape-pop`), 1px edge | Radix Popover, aligns to the trigger's end; the VRAM panel (settings round 1) |
 
 The signature component — the plan review as **destination bays** — is built as a feature
 (`DestinationBays`, below), on the `shape-bay` utility in `globals.css`.
@@ -42,7 +43,7 @@ The signature component — the plan review as **destination bays** — is built
 | `StatusLight` | Light + word; `attention` / `working` / `idle` | Never colour alone |
 | `Rotor` | Job-progress ring: 18 segments, pulsing head, contra-rotating marks while `progress` is a number | `progress={null}` = idle, nothing turns; `compact` = 58px ring for a job row, no figure or outer marks |
 | `Ribs` | Fixed background of 18 radiating lines with a sweeping light | Rendered once, in the root layout |
-| `VramGauge` | Top-bar memory meter, aqua → orange; `usedGb={null}` = not measured | `role="meter"` |
+| `VramGauge` | Top-bar memory meter, aqua → orange; `usedGb={null}` = not measured | `role="meter"`; `VramMeter` is its look alone, wrapped by `VramPanel` once measured |
 | `SonicControl` | Hold-to-talk control (pointer or Space/Enter); `available={false}` shows why in a tooltip | Client |
 | `ThemeToggle` | Sun / moon icon key; icon and label follow `<html data-theme>` via CSS | Client; saves to `localStorage` |
 
@@ -50,7 +51,12 @@ The signature component — the plan review as **destination bays** — is built
 
 | Component | What it is |
 | --- | --- |
-| `TopBar` | The app's navigation: wordmark home, VRAM gauge, sonic control, theme toggle |
+| `TopBar` | The app's navigation: wordmark home, VRAM gauge (opens `VramPanel`), sonic control, settings key, theme toggle |
+| `VramPanel` | The gauge as a `Popover` trigger with a chevron; content rendered on the server |
+| `VramDetails` | The panel's content: `VramBar`, Jugaad's loaded models and their jobs, other apps, `FreeVramButton` |
+| `VramBar` | Card memory split into lit (Jugaad) and hatched (other apps) segments, with a legend |
+| `FreeVramButton` | "Free N GB" — unloads Jugaad's models only; disabled while a model job runs |
+| `WarnNote` | A warning beside the control it's about: lit left bar, "!" mark, bold lead; `attention` / `destructive` |
 | `ModuleView` | The full view a module tile opens into — `NotchedPanel` sharing the tile's view-transition name, content materialises | `title` + `back` for a screen inside the module ("Downloads · plan", back to the folder) |
 | `BackToWorkbench` | Icon key back to the workbench; runs the reverse morph (`module-close`); Escape does the same |
 | `LiveRefresh` | Refreshes the page every couple of seconds while a job runs — the store is the only channel to the worker. Used by the workbench and the Organiser |
@@ -70,10 +76,11 @@ The signature component — the plan review as **destination bays** — is built
 | `JobProgress` | `src/features/organiser/` | A job on the compact rotor with its line and Stop; stacks on a phone; says when the worker isn't running |
 | `FolderActions` | `src/features/organiser/` | The stage's one primary action plus the secondary ones |
 | `StatusWord` | `src/features/organiser/` | A folder's status as a `StatusLight` and word |
-| `CategoryEditor` | `src/features/organiser/` | Category rows (locked C1): tick to keep, rename in place, add, approve |
+| `CategoryEditor` | `src/features/organiser/` | Category rows (locked C1): tick to keep, rename in place, add, approve; warns when an unticked folder of the owner's will be emptied |
 | `BuildPlanPanel` | `src/features/organiser/` | "Sort N files into M folders", the Include subfolders tick box, Build plan |
 | `DestinationBays` | `src/features/organiser/` | **Signature.** One notched bay per destination: include ticks, confidence, rename ticks (R1), Send to… in the review bay, sticky approve bar |
-| `PlanHistory` | `src/features/organiser/` | Applied plans on the batch timeline with undo, failures and retry |
+| `PlanHistory` | `src/features/organiser/` | Applied plans on the batch timeline with undo, failures and retry; "Put back" for files moved out of the owner's folders |
 | `SubfolderToggle` | `src/features/organiser/` | The folder's "Include subfolders" tick — suggestions and plans follow it |
 | `RemoveFolder` | `src/features/organiser/` | "Remove from list" with a confirming dialog; nothing on disk changes |
 | `WorkerNotice` | `src/features/organiser/` | Says, once, when the worker isn't running and how to start it |
+| `ModelSettings` | `src/features/settings/` | Model per job (locked M1 rows): dropdowns of capable models, change notes, "fits together" bar, Save / Reset |

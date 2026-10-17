@@ -14,6 +14,7 @@ const NOTES: Record<string, string> = {
   "build-plan": "Nothing moves until you approve the plan. You can leave this page.",
   "apply-plan": "Every move is journalled and can be undone.",
   "undo-plan": "Files changed since they were moved are left where they are.",
+  "put-back": "Only files from your own folders go back; everything else stays sorted.",
 };
 
 /** Jobs that can stop part-way and leave everything consistent. Moving files runs to the end. */

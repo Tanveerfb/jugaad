@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import type { ActionResult } from "@/app/organiser/actions";
+import type { ActionResult } from "@/lib/action-result";
 import { toast } from "@/stores/toast-store";
 
 /**

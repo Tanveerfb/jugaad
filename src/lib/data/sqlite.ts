@@ -8,6 +8,7 @@ import { sqliteFolders } from "./sqlite-folders";
 import { sqliteJobs } from "./sqlite-jobs";
 import { sqliteJournal } from "./sqlite-journal";
 import { sqlitePlans } from "./sqlite-plans";
+import { sqliteSettings } from "./sqlite-settings";
 import type { WorkbenchStore } from "./types";
 
 /**
@@ -29,6 +30,7 @@ export function openSqliteStore(path: string): WorkbenchStore {
     ...sqliteExamples(db),
     ...sqlitePlans(db),
     ...sqliteJournal(db),
+    ...sqliteSettings(db),
     close() {
       db.close();
     },

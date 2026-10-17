@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { ActionResult } from "@/lib/action-result";
 import { getStore } from "@/lib/data";
 import { toCategoryName } from "@/lib/domain/category-rules";
 import { jobFolderId } from "@/lib/domain/folder-status";
@@ -17,7 +18,6 @@ import type { CategoryState } from "@/schemas/category-schema";
  * the page. Nothing here moves a file: the worker does that, through the safety layer.
  */
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const id = z.string().min(1).max(64);
 
@@ -180,6 +180,16 @@ export async function undoPlan(planId: string): Promise<ActionResult> {
     const plan = getStore().getPlan(id.parse(planId));
     if (!plan) throw new Error("That plan no longer exists.");
     enqueueFor(plan.folderId, "undo-plan", { planId: plan.id });
+  });
+}
+
+/** Puts back only the files a plan moved out of the owner's own folders (History, "Put back"). */
+export async function putBack(planId: string): Promise<ActionResult> {
+  return run(() => {
+    const plan = getStore().getPlan(id.parse(planId));
+    if (!plan) throw new Error("That plan no longer exists.");
+    if (plan.status !== "applied") throw new Error("Only a plan that finished moving can put files back.");
+    enqueueFor(plan.folderId, "put-back", { planId: plan.id });
   });
 }
 
