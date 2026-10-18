@@ -16,7 +16,7 @@ const VRAM_TOTAL_GB = 16;
 /** The app's navigation: wordmark home, VRAM gauge (opens the VRAM panel), the sonic control, settings, theme switch. */
 export function TopBar() {
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/90 px-4 py-2.5 sm:gap-4 sm:px-7 sm:py-3">
+    <header className="sticky top-(--titlebar-h) z-20 flex items-center gap-2 border-b border-border/60 bg-background/90 px-4 py-2.5 sm:gap-4 sm:px-7 sm:py-3">
       <Link
         href="/"
         className="flex items-center gap-2.5 font-heading text-xl font-bold tracking-[0.01em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"

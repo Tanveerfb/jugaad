@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Jugaad's app icon, locked 2026-10-18 (docs/design/desktop-app.html, option C): a lit key,
+       its edge light mid-chase round a solid core. Render with `npm run desktop:icon`. -->
+  <polygon points="16,5 48,5 63,32 48,59 16,59 1,32" fill="#061428"/>
+  <polygon points="16,5 48,5 63,32 48,59 16,59 1,32" fill="none" stroke="#ff8a2b" stroke-width="4" stroke-dasharray="70 30" stroke-linecap="round"/>
+  <polygon points="24,19 40,19 48,32 40,45 24,45 16,32" fill="#ff8a2b"/>
+</svg>

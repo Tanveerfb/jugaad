@@ -16,19 +16,21 @@ moves. Who updates it: the checkpoint, whenever a module is added, moved or remo
 The app never does long work and the worker never renders: the app queues a **job**, the worker
 claims it, runs its handler and writes progress, results and status back. `WorkbenchStore`
 (`src/lib/data/`) is the only way either side touches the database. Pages refresh themselves
-while a job runs (`src/components/live-refresh.tsx`). `npm run app` starts both.
+while a job runs (`src/components/live-refresh.tsx`). `npm run app` starts both; so does the
+desktop app (`desktop/`), which shows the app in its own window and keeps both running in the
+tray until Quit.
 
 ## Modules
 
 | Folder | Owns | Depends on | Used by |
 | --- | --- | --- | --- |
-| `src/lib/data/` | `WorkbenchStore`: every SQL statement, migrations v1–12 (`migrations.ts`), one file per area (`sqlite-jobs`, `-folders`, `-files`, `-plans`, `-journal`, `-categories`, `-classifications`, `-examples`) composed in `sqlite.ts` | `src/schemas/`, `src/lib/domain/` lifecycles | everything with state |
+| `src/lib/data/` | `WorkbenchStore`: every SQL statement, migrations v1–13 (`migrations.ts`), one file per area (`sqlite-jobs`, `-folders`, `-files`, `-plans`, `-journal`, `-categories`, `-classifications`, `-examples`, `-settings`) composed in `sqlite.ts` | `src/schemas/`, `src/lib/domain/` lifecycles | everything with state |
 | `src/lib/domain/` | Pure rules, no I/O: lifecycles (job, plan, category), `path-guard`, `plan-rules` (`inScope`, `toMoves`, `isFolderOwned`, `looksMessy`), `cluster`, `projects`, `filing-examples`, `folder-samples`, `folder-status`, `plan-bays`, `vram-plan` | nothing | all of `src/lib/` |
 | `src/lib/files/` | Reading the disk: `walk-folder` (skips junctions, protected folders), `online-only` (OneDrive placeholders), `hash-file` (full SHA-256 or `q:` fingerprint), `read-signals` + `external-readers` (PDF, Word, EXIF, ffprobe, tar, program info), `render-pdf-page`, `scan-folder` | data, domain | worker (scan) |
 | `src/lib/safety/` | **The only code that changes the disk.** `allow-folder`, `move-file` (`moveFile`, `moveFolder`: no overwrite, copy-verify across drives, case-only via a temp name), `apply-plan` (apply / undo, journalled), `reconcile-journal`, `protected-paths` | data, domain | worker (apply, undo, start-up), actions (allow) |
 | `src/lib/ai/` | `WorkbenchAi` (`types.ts`): `classifyFile`, `embedTexts`, `nameCategories`, `describeImage`. `ai-sdk.ts` (AI SDK 7 → Ollama), `ollama-embedder.ts` (`/api/embed`), `mock.ts`, `model-manager.ts` (`prepareModel`, VRAM budget), `models.ts`, `prompts/` | schemas, domain | organiser, worker |
 | `src/lib/organiser/` | The Organiser's steps: `suggest-categories` (captions → embeddings → clusters → one naming call), `describe-images`, `build-plan` (classify against approved categories, cached), `edit-plan` (rename ticks, "Send to…" + filing examples), `organiser-view` (what pages show) | data, domain, ai, files | worker handlers, pages, actions |
-| `src/worker/` | `run-worker` (claim loop, heartbeat, cancel polling, reconcile on start), `job-handlers` (`organiser/scan-folder`, `suggest-categories`, `build-plan`, `apply-plan`, `undo-plan`) | everything in `src/lib/` | — |
+| `src/worker/` | `run-worker` (claim loop, heartbeat, cancel polling, reconcile on start), `job-handlers` (`organiser/scan-folder`, `suggest-categories`, `build-plan`, `apply-plan`, `undo-plan`, `put-back`); stops on SIGINT/SIGTERM or an IPC `"shutdown"` from the desktop app | everything in `src/lib/` | — |
 | `src/app/` | Routes: `/` workbench, `/organiser`, `/organiser/[folderId]/{categories,plan,history}`, `/settings`; `organiser/actions.ts` and `settings/actions.ts` — every Server Action | lib, features, components | — |
 | `src/lib/settings-view.ts` | What `/settings` and the VRAM panel show: Ollama's state, installed models and capabilities, the model per job, Jugaad's loaded models | ai, data, domain (`model-jobs`) | settings page, top bar |
 | `src/features/organiser/` | The Organiser's screens (folder rail, stage, step track, category editor, destination bays, history…) | components, lib (views only) | organiser routes |
@@ -36,6 +38,7 @@ while a job runs (`src/components/live-refresh.tsx`). `npm run app` starts both.
 | `src/features/settings/` | The model-per-job form | components, lib (views only) | `/settings` |
 | `src/components/` | Shared: motif primitives (`motif/`), the kit (`ui/`), top bar, module view, live refresh | — | features, routes |
 | `scripts/run-app.mjs` | `npm run app`: builds if needed, starts app and worker together | — | the owner |
+| `desktop/` | The desktop app (Electron, plain `.mjs`): `main.mjs` (startup screen, app window, tray, close-to-tray, Quit), `jugaad-processes.mjs` (build, app and worker on Electron's own Node, log at `%LOCALAPPDATA%\Jugaad\desktop\jugaad.log`), `preload.cjs`, `splash.html`, `make-icon.mjs` / `make-shortcut.mjs`, `assets/` | the built app, `src/worker/` (as processes) | the owner's shortcut |
 
 ## Main flows
 

@@ -94,6 +94,12 @@ Materialise 680ms.
 bays: two cut top corners and a small top notch), `shape-pop` (drop-downs: a pointer near the
 top right, `--pointer` 60px from the edge; chamfered lower corners).
 
+**Desktop app** (locked 2026-10-18, `docs/design/desktop-app.html`): the app icon is a *lit key*
+— a dark hexagon whose orange edge light is mid-chase (dash 70/30) round a solid orange core
+(`desktop/assets/icon.svg`). The window's title strip is 32 px (`--titlebar-h`), in `background`
+with `text-muted` symbols, following dark/light. The startup screen is a notched panel with the
+rotor and three steps; its error is a `danger` lead with Try again / Open the log.
+
 **Memory that isn't Jugaad's** is hatched (`bg-hatched`, muted diagonal stripes) on VRAM bars,
 so it reads apart from Jugaad's lit share without colour. **Warnings** sit beside the control
 they're about (`WarnNote`): a lit left bar in the attention colour, an exclamation mark, a bold

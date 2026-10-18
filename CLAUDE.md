@@ -25,6 +25,7 @@ docs before writing code) applies to Claude Code too.
 - **Deploys**: nowhere. Runs locally only (`npm run dev` / `npm start` on the owner's PC)
 - **Area files**: none · **Map**: `docs/architecture.md`
 - **Trello board**: https://trello.com/b/2poFG0U9/jugaad
+- **Studio credit**: local only — not asked (§CREDIT)
 - **Motif**: Universe-inspired — *Doctor Who* "Honeycomb console", locked 2026-10-08, recorded
   in `design-system.md` (binding); locked mockup `docs/design/motif.html`. `PRODUCT.md` is the
   strategic summary the `impeccable` design skill reads
@@ -63,7 +64,9 @@ no git). Project-specific:
 ## Commands
 
 ```bash
-npm run app            # how the owner runs Jugaad: the built app and the worker together (builds first if needed)
+npm run app            # the built app and the worker together in a terminal (builds first if needed)
+npm run desktop        # the desktop app (Electron): same two processes, own window, tray — how the owner runs Jugaad
+npm run desktop:shortcut  # (re)writes the Desktop and Start menu shortcuts; desktop:icon re-renders the icon
 npm run dev            # Next.js dev server, http://127.0.0.1:3000 — loopback only (§AI exception)
 npm run worker         # the job worker (tsx); worker:dev restarts on change. Run beside dev
 npm run build          # production build — verify after changes
@@ -95,6 +98,7 @@ Verified against `package.json`, 2026-10-08.
 | Worker | `src/worker/`, run with `tsx`; talks to the app only through SQLite |
 | AI | `ai` 7 + `@ai-sdk/openai-compatible` 3 → Ollama only (`gemma4:12b-it-qat`); mock by default |
 | Tests | Vitest 5 |
+| Desktop | Electron 44.9.0 (dev dependency; its Node is 24.22), `desktop/` — not packaged, run from the repo |
 | Hosting | local only |
 
 ## Architecture — the patterns that are load-bearing here
@@ -160,6 +164,12 @@ Verified against `package.json`, 2026-10-08.
 - **`cacheComponents` is on: a store read in a page needs `await connection()` inside a
   `<Suspense>`**, or `node:sqlite`'s synchronous read runs once at build time and the page
   shows stale data. The Organiser pages follow this pattern.
+- **Electron 44 downloads its binary on demand, not on `npm install`.** After a fresh `npm ci`,
+  run `npx install-electron` before `npm run desktop` or the shortcut works.
+- **The desktop app and `npm run app` share 127.0.0.1:3000.** If one is running, the desktop app
+  opens on it and leaves its processes alone; Quit then closes only the window. Stop the desktop
+  app from the tray (Quit), not by killing `electron.exe`, so the worker frees its models — though
+  a killed parent also stops the worker (it exits on IPC `disconnect`).
 - **Only one `next dev` per folder.** To try the Organiser without touching the real database,
   stop `jugaad-dev` and start `jugaad-dev-sandbox` (`.claude/launch.json`: data in
   `node_modules/.cache/jugaad-sandbox/data`), and run the worker with the same

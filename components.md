@@ -52,6 +52,7 @@ The signature component — the plan review as **destination bays** — is built
 | Component | What it is |
 | --- | --- |
 | `TopBar` | The app's navigation: wordmark home, VRAM gauge (opens `VramPanel`), sonic control, settings key, theme toggle |
+| `DesktopTitleBar` | The desktop window's 32 px title strip (app icon, "Jugaad"), dragged to move the window; the Windows buttons sit over its right end. Shown only under `html[data-desktop]` (`desktop:` variant) |
 | `VramPanel` | The gauge as a `Popover` trigger with a chevron; content rendered on the server |
 | `VramDetails` | The panel's content: `VramBar`, Jugaad's loaded models and their jobs, other apps, `FreeVramButton` |
 | `VramBar` | Card memory split into lit (Jugaad) and hatched (other apps) segments, with a legend |

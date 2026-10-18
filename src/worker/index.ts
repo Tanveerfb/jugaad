@@ -27,3 +27,9 @@ async function shutdown(signal: string) {
 }
 process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
+// the desktop app (desktop/jugaad-processes.mjs) asks over IPC — Windows has no SIGINT to send
+// a child — and if the desktop app itself goes away, the worker stops rather than lingering
+process.on("message", (message) => {
+  if (message === "shutdown") void shutdown("desktop");
+});
+process.on("disconnect", () => void shutdown("desktop-gone"));

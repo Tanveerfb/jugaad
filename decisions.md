@@ -585,3 +585,25 @@ Once the ribs' sweep was found to be the flicker, the owner asked for the other 
 while looking for it to be undone: content materialises again in three soft pulses (680 ms),
 and the ribs carry no compositing-layer tweak. The "Content fades in once" entry above is
 reversed; "Background ribs are still" stands.
+
+## 2026-10-18 — Jugaad as a desktop app (Electron)
+
+The owner asked for a desktop shortcut and "an app out of this". Offered: an app window in
+Edge/Chrome (recommended, no new package), a shortcut only, or Electron. **Their pick:
+Electron**, and closing the window keeps the app and worker running (Quit is in the tray).
+
+- **New dev dependency: `electron` 44.9.0.** Its built-in Node is 24.22 — the major Jugaad pins —
+  and `node:sqlite`, the worker (tsx, `@napi-rs/canvas`) and `next start` all run under it
+  (`ELECTRON_RUN_AS_NODE`), checked before building. So the shortcut needs no Node on PATH:
+  fnm only puts one there inside a terminal.
+- **Not packaged into an installer.** The shortcut starts `electron.exe` from `node_modules`
+  with the project folder; the app is still built and run from the repo, as `npm run app` is.
+  An installer (electron-builder) would copy the build and `node_modules` out of the repo for
+  no gain on a one-PC app. Revisit if Jugaad is ever installed somewhere else.
+- **One copy of the app.** If Jugaad already answers on 127.0.0.1:3000 (`npm run app` in a
+  terminal), the window opens on it and leaves those processes alone.
+- **Quit stops the worker cleanly** over an IPC message (it frees its models), not a kill.
+- Locked design `docs/design/desktop-app.html`: icon C (a lit key — hexagon with an orange edge
+  mid-chase round a solid core), the title bar in Jugaad's colours (Windows buttons over the
+  app's own 32 px strip, following dark/light), the startup screen (rotor and steps; an error
+  with Try again / Open the log) and the tray menu (Open / Quit, one note on the first close).

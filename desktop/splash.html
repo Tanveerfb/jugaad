@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'">
+<title>Jugaad</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+/* The startup screen, locked 2026-10-18 (docs/design/desktop-app.html §2). Tokens = the motif's
+   dark scheme (design-system.md); the window is frameless and transparent, so this is its shape. */
+:root{--bg:#061428;--surface-2:#11294f;--border:#2a5287;--rib:#2a5a92;--text:#e6edf6;--muted:#9db0c7;
+  --accent:#ff8a2b;--aqua:#52d6e6;--danger:#ff6b6b;--focus:#ffb067;--ember:#b33f0f;--ember-hi:#c94a14;
+  --ease:cubic-bezier(.16,1,.3,1);color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:transparent;overflow:hidden}
+body{font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif;color:var(--text);-webkit-app-region:drag;user-select:none}
+.splash{position:absolute;inset:0;background:var(--bg);display:grid;place-items:center;text-align:center;padding:24px;
+  clip-path:polygon(18px 0,calc(50% - 40px) 0,calc(50% - 30px) 8px,calc(50% + 30px) 8px,calc(50% + 40px) 0,calc(100% - 18px) 0,100% 18px,100% calc(100% - 18px),calc(100% - 18px) 100%,18px 100%,0 calc(100% - 18px),0 18px);
+  box-shadow:inset 0 0 0 1px var(--border)}
+svg.ribs{position:absolute;inset:0;width:100%;height:100%;opacity:.16}
+.inner{position:relative;display:grid;justify-items:center;gap:12px}
+.wm{font:700 22px "Space Grotesk",system-ui,sans-serif;letter-spacing:.01em}
+.rotor{width:74px;height:74px}
+.seg{fill:var(--surface-2)}.seg.on{fill:var(--aqua)}.seg.lead{fill:var(--accent);animation:pulse 1.1s var(--ease) infinite}
+.ring{transform-origin:50% 50%;animation:spin 30s linear infinite}
+.ring2{transform-origin:50% 50%;animation:spin 22s linear infinite reverse}
+@keyframes pulse{50%{opacity:.35}}@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.rotor *{animation:none!important}}
+.steps{list-style:none;margin:0;padding:0;font-size:13px;display:grid;gap:3px;text-align:left}
+.steps li{display:flex;gap:8px;align-items:center;color:var(--muted)}
+.l{width:8px;height:8px;border-radius:50%;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+.done .l{background:var(--aqua);box-shadow:none}
+.now{color:var(--text)!important}.now .l{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.err{display:flex;text-align:left;font-size:13.5px;max-width:320px;border-left:3px solid var(--danger);padding:6px 10px;
+  background:color-mix(in srgb,var(--danger) 8%,transparent);color:var(--muted)}
+.err b{color:var(--text)}
+.btns{display:flex;gap:8px;justify-content:center;-webkit-app-region:no-drag}
+.key{border:0;cursor:pointer;padding:7px 16px;font:600 13.5px "IBM Plex Sans",system-ui,sans-serif;color:var(--text);
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%,0 50%)}
+.key.primary{background:var(--ember);color:#fff}.key.primary:hover{background:var(--ember-hi)}
+.key.ghost{background:var(--surface-2)}.key.ghost:hover{filter:brightness(1.2)}
+.key:focus-visible{outline:none;background:var(--focus);color:#1c0b00}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="splash">
+  <svg class="ribs" viewBox="0 0 420 300" preserveAspectRatio="none" aria-hidden="true"><g stroke="var(--rib)">
+    <line x1="210" y1="-80" x2="-40" y2="300"/><line x1="210" y1="-80" x2="40" y2="300"/><line x1="210" y1="-80" x2="120" y2="300"/><line x1="210" y1="-80" x2="210" y2="300"/><line x1="210" y1="-80" x2="300" y2="300"/><line x1="210" y1="-80" x2="380" y2="300"/><line x1="210" y1="-80" x2="460" y2="300"/></g></svg>
+  <div class="inner">
+    <svg class="rotor" id="rotor" viewBox="0 0 100 100" aria-hidden="true">
+      <g class="ring"><circle cx="50" cy="50" r="47" fill="none" stroke="var(--border)" stroke-dasharray="2 6"/></g>
+      <g class="ring2"><circle cx="50" cy="50" r="41" fill="none" stroke="var(--border)" stroke-dasharray="8 4 1 4"/></g>
+      <g id="segs"></g>
+    </svg>
+    <div class="wm">Jugaad</div>
+    <ul class="steps" id="steps" aria-live="polite"></ul>
+    <div class="err" id="err" role="alert" hidden><span><b id="err-lead"></b> <span id="err-more"></span></span></div>
+    <div class="btns" id="btns" hidden>
+      <button class="key primary" id="retry">Try again</button>
+      <button class="key ghost" id="log">Open the log</button>
+    </div>
+  </div>
+</div>
+<script>
+const segs = document.getElementById("segs");
+function drawRotor(lit) {
+  let s = "";
+  for (let i = 0; i < 18; i++) {
+    const a = (i * 20 - 90) * Math.PI / 180, b = (i * 20 + 14 - 90) * Math.PI / 180, R = 34, r = 25;
+    const p = [[R, a], [R, b], [r, b], [r, a]].map(([d, t]) => `${(50 + d * Math.cos(t)).toFixed(1)},${(50 + d * Math.sin(t)).toFixed(1)}`);
+    s += `<polygon class="seg${i < lit ? " on" : i === lit ? " lead" : ""}" points="${p.join(" ")}"/>`;
+  }
+  segs.innerHTML = s;
+}
+drawRotor(0);
+
+// state from the main process: { steps: [{ label, state: "done" | "now" | "todo" }], error?: { lead, more } }
+window.jugaadDesktop.onState(({ steps, error }) => {
+  const list = document.getElementById("steps");
+  list.replaceChildren(...steps.map(({ label, state }) => {
+    const li = document.createElement("li");
+    if (state !== "todo") li.className = state;
+    li.innerHTML = '<span class="l"></span>';
+    li.append(label);
+    return li;
+  }));
+  const done = steps.filter((s) => s.state === "done").length;
+  drawRotor(Math.round((done / Math.max(steps.length, 1)) * 18));
+  document.getElementById("rotor").hidden = Boolean(error);
+  list.hidden = Boolean(error);
+  document.getElementById("err").hidden = !error;
+  document.getElementById("btns").hidden = !error;
+  if (error) {
+    document.getElementById("err-lead").textContent = error.lead;
+    document.getElementById("err-more").textContent = error.more;
+    document.getElementById("retry").focus();
+  }
+});
+document.getElementById("retry").onclick = () => window.jugaadDesktop.retry();
+document.getElementById("log").onclick = () => window.jugaadDesktop.openLog();
+</script>
+</body>
+</html>

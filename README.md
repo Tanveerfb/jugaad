@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jugaad
 
-## Getting Started
+A local AI workbench for one Windows PC. One Next.js app, a background worker and local models
+(Ollama) doing narrow, reliable jobs. Private by default: it reads only folders you allow, and it
+never deletes a file.
 
-First, run the development server:
+**Built:** the **Organiser**. Add a folder, and Jugaad scans it and suggests categories. You edit
+and approve them, it builds a plan, and you approve that. Only then does it move files. Every move
+is journalled and can be undone, in full or just the files taken out of your own folders. Also
+built: a settings page (a model per job, free the GPU's memory) and a desktop app.
+**Planned:** Voice, Ask my files, Auditor.
+
+## Run it
+
+Needs Node 24 (`.nvmrc`), and [Ollama](https://ollama.com) for real models. Without Ollama,
+Jugaad runs on a built-in mock.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npx install-electron      # Electron's program file, for the desktop app
+npm run desktop:shortcut  # Jugaad on the Desktop and in the Start menu
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open **Jugaad** from the shortcut. The first start builds the app (about a minute). Closing
+the window keeps Jugaad running in the tray; right-click the tray icon and choose Quit to stop it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other ways to run it:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run desktop   # the same desktop app, from a terminal
+npm run app       # app and worker in a terminal, at http://127.0.0.1:3000
+npm run dev       # development: next dev — run `npm run worker` beside it
+```
 
-## Learn More
+To use Ollama, copy `.env.example` to `.env.local` and set `JUGAAD_AI_PROVIDER=ollama`. Every
+variable is described in `.env.example` and `environment.md`. Data lives in
+`%LOCALAPPDATA%\Jugaad` (the database, and the desktop app's log).
 
-To learn more about Next.js, take a look at the following resources:
+## Develop
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm test          # unit tests, mock model only
+npm run lint
+npm run build     # the check before every commit
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Start with `CLAUDE.md` (working agreement and traps), `docs/STATUS.md` (where things are) and
+`docs/architecture.md` (the map). Locked designs are in `docs/design/`.
